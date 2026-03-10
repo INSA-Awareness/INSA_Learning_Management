@@ -1,0 +1,37 @@
+import React from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/Button';
+
+interface SupportCTAProps {
+    title?: string;
+    description?: string;
+    buttonText?: string;
+    buttonHref?: string;
+}
+
+export function SupportCTA({
+    title = "Can't find what you're looking for?",
+    description = "Our dedicated cyber intelligence support experts are available 24/7 to assist citizens and organizations with specific security challenges.",
+    buttonText = "Contact Support",
+    buttonHref = "/contact"
+}: SupportCTAProps) {
+    return (
+        <div className="mt-20 bg-brand-navy rounded-3xl p-10 md:p-16 text-center text-white relative overflow-hidden">
+            {/* Abstract Background Element */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-brand-red rounded-full opacity-20 blur-3xl mix-blend-screen pointer-events-none"></div>
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-brand-blue rounded-full opacity-20 blur-3xl mix-blend-screen pointer-events-none"></div>
+
+            <div className="relative z-10 max-w-2xl mx-auto">
+                <h3 className="text-2xl font-bold mb-4">{title}</h3>
+                <p className="text-gray-400 mb-8 text-sm leading-relaxed">
+                    {description}
+                </p>
+                <Link href={buttonHref}>
+                    <Button className="bg-white text-black hover:bg-gray-100 transition-colors">
+                        {buttonText} &rarr;
+                    </Button>
+                </Link>
+            </div>
+        </div>
+    );
+}

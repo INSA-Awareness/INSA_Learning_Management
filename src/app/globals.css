@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-red: #da294e;
+  --color-brand-red-hover: #b91c3d;
+  --color-brand-dark: #1e1e24; /* Adjusted base dark color */
+  --color-brand-darker: #151519;
+  --color-brand-gray: #f9fafb;
+  --color-brand-text: #4b5563;
+  --color-brand-border: #e5e7eb;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-brand-darker);
+    --foreground: #f9fafb;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
