@@ -31,7 +31,7 @@ export default function ContactUsPage() {
                                 <div>
                                     <h4 className="font-semibold text-gray-900">Email Support</h4>
                                     <p className="text-sm text-gray-500 mb-1">For general inquiries and account help.</p>
-                                    <a href="mailto:support@cybersafenation.gov" className="text-brand-red font-medium text-sm hover:underline">
+                                    <a href="mailto:support@cybersafenation.gov" className="text-primary font-medium text-sm hover:underline">
                                         support@cybersafenation.gov
                                     </a>
                                 </div>
@@ -68,11 +68,11 @@ export default function ContactUsPage() {
                         </h3>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center py-2 border-b border-gray-100 cursor-pointer group">
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-brand-red">How do I verify a government email?</span>
+                                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">How do I verify a government email?</span>
                                 <span className="text-gray-400">&#11163;</span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-gray-100 cursor-pointer group">
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-brand-red">Is the cybersecurity training mandatory?</span>
+                                <span className="text-sm font-medium text-gray-700 group-hover:text-primary">Is the cybersecurity training mandatory?</span>
                                 <span className="text-gray-400">&#11163;</span>
                             </div>
                         </div>
@@ -94,9 +94,9 @@ export default function ContactUsPage() {
                             <Input label="Work Email" type="email" placeholder="jane.doe@organization.com" required />
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject Category <span className="text-brand-red">*</span></label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject Category <span className="text-primary">*</span></label>
                                 <div className="relative">
-                                    <select className="block w-full rounded-md border border-gray-300 py-3 pl-3 pr-10 text-sm focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red appearance-none bg-white">
+                                    <select className="block w-full rounded-md border border-gray-300 py-3 pl-3 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none bg-white">
                                         <option>General Inquiry</option>
                                         <option>Report Incident</option>
                                         <option>Training Support</option>
@@ -109,21 +109,21 @@ export default function ContactUsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Message <span className="text-brand-red">*</span></label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Message <span className="text-primary">*</span></label>
                                 <textarea
                                     rows={5}
                                     required
                                     placeholder="How can we help you? Please do not include sensitive personal information like SSN or passwords."
-                                    className="block w-full rounded-md border border-gray-300 py-3 px-3 text-sm focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red resize-none"
+                                    className="block w-full rounded-md border border-gray-300 py-3 px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
                                 ></textarea>
                             </div>
 
                             <div className="flex items-start gap-3">
                                 <div className="flex items-center h-5">
-                                    <input id="consent" type="checkbox" className="w-4 h-4 text-brand-red bg-white border-gray-300 rounded focus:ring-brand-red focus:ring-2" required />
+                                    <input id="consent" type="checkbox" className="w-4 h-4 text-primary bg-white border-gray-300 rounded focus:ring-primary focus:ring-2" required />
                                 </div>
                                 <label htmlFor="consent" className="text-xs text-gray-500 leading-relaxed">
-                                    I consent to having this website store my submitted information so they can respond to my inquiry. See our <Link href="/about" className="text-brand-red hover:underline">Privacy Policy</Link>.
+                                    I consent to having this website store my submitted information so they can respond to my inquiry. See our <Link href="/about" className="text-primary hover:underline">Privacy Policy</Link>.
                                 </label>
                             </div>
 

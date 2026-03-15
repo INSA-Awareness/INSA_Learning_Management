@@ -15,7 +15,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 {label && (
                     <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {label}
-                        {props.required && <span className="text-brand-red ml-1">*</span>}
+                        {props.required && <span className="text-primary ml-1">*</span>}
                     </label>
                 )}
                 <div className="relative">
@@ -29,7 +29,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                         ref={ref}
                         className={`
               block w-full rounded-md border 
-              ${error ? 'border-brand-red focus:border-brand-red focus:ring-brand-red' : 'border-gray-300 focus:border-brand-red focus:ring-brand-red'}
+              ${error ? 'border-primary focus:border-primary focus:ring-primary' : 'border-gray-300 focus:border-primary focus:ring-primary'}
               ${icon ? 'pl-10' : 'pl-3'}
               py-2.5 text-sm shadow-sm
               bg-white text-gray-900 placeholder-gray-400
@@ -40,7 +40,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                         {...props}
                     />
                 </div>
-                {error && <p className="mt-1 text-sm text-brand-red">{error}</p>}
+                {error && <p className="mt-1 text-sm text-primary">{error}</p>}
             </div>
         );
     }

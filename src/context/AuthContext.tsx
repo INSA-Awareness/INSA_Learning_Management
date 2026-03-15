@@ -1,0 +1,76 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, apiFetch, clearTokens, getTokens } from '@/lib/api';
+
+interface AuthContextType {
+    user: User | null;
+    setUser: React.Dispatch<React.SetStateAction<User | null>>;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    logout: () => void;
+    checkAuth: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const checkAuth = async () => {
+        setIsLoading(true);
+        const tokens = getTokens();
+        if (!tokens?.access) {
+            setUser(null);
+            setIsLoading(false);
+            return;
+        }
+
+        const { data, status } = await apiFetch<User>('/api/auth/me/');
+        if (status === 200 && data) {
+            setUser(data);
+        } else {
+            setUser(null);
+            clearTokens();
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        checkAuth();
+
+        const handleUnauthorized = () => {
+            setUser(null);
+            // Optional: redirect to login
+        };
+
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    }, []);
+
+    const logout = () => {
+        clearTokens();
+        setUser(null);
+        window.location.href = '/login';
+    };
+
+    const value = {
+        user,
+        setUser,
+        isAuthenticated: !!user,
+        isLoading,
+        logout,
+        checkAuth,
+    };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+}

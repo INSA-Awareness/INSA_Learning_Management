@@ -16,10 +16,10 @@ export function SupportCTA({
     buttonHref = "/contact"
 }: SupportCTAProps) {
     return (
-        <div className="mt-20 bg-brand-navy rounded-3xl p-10 md:p-16 text-center text-white relative overflow-hidden">
-            {/* Abstract Background Element */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-brand-red rounded-full opacity-20 blur-3xl mix-blend-screen pointer-events-none"></div>
-            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-brand-blue rounded-full opacity-20 blur-3xl mix-blend-screen pointer-events-none"></div>
+        <div className="mt-20 bg-secondary rounded-3xl p-10 md:p-16 text-center text-white relative overflow-hidden">
+            {/* Background Decorations */}
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-3xl mix-blend-screen pointer-events-none"></div>
+            <div className="absolute top-10 right-10 w-32 h-32 bg-primary rounded-full opacity-20 blur-2xl mix-blend-screen pointer-events-none"></div>
 
             <div className="relative z-10 max-w-2xl mx-auto">
                 <h3 className="text-2xl font-bold mb-4">{title}</h3>

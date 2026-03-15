@@ -9,11 +9,11 @@ export default function AboutUsPage() {
             <section className="relative px-6 py-24 sm:py-32 lg:px-8 text-center bg-gray-50 border-b border-gray-100 overflow-hidden">
                 <div className="absolute top-0 right-1/4 -z-10 w-[500px] h-[500px] bg-red-50 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
 
-                <span className="text-brand-red text-xs font-bold tracking-widest uppercase mb-4 inline-block">
+                <span className="text-primary text-xs font-bold tracking-widest uppercase mb-4 inline-block">
                     &#128302; NATIONAL INITIATIVE
                 </span>
                 <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl max-w-3xl mx-auto">
-                    Defending <span className="text-brand-red">Our</span><br />Digital Sovereignty
+                    Defending <span className="text-primary">Our</span><br />Digital Sovereignty
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-gray-600 max-w-2xl mx-auto">
                     The National Cyber Security Awareness Portal is the central authority dedicated to building a resilient, secure, and informed digital society for all citizens.
@@ -22,15 +22,15 @@ export default function AboutUsPage() {
                 {/* Stats Grid */}
                 <div className="mt-16 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 py-8">
                     <div className="px-6 flex flex-col items-center">
-                        <span className="text-4xl font-bold text-brand-red mb-1">24/7</span>
+                        <span className="text-4xl font-bold text-primary mb-1">24/7</span>
                         <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Threat Monitoring</span>
                     </div>
                     <div className="px-6 flex flex-col items-center py-6 sm:py-0">
-                        <span className="text-4xl font-bold text-brand-red mb-1">12M+</span>
+                        <span className="text-4xl font-bold text-primary mb-1">12M+</span>
                         <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Citizens Empowered</span>
                     </div>
                     <div className="px-6 flex flex-col items-center">
-                        <span className="text-4xl font-bold text-brand-red mb-1">98%</span>
+                        <span className="text-4xl font-bold text-primary mb-1">98%</span>
                         <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Uptime Guarantee</span>
                     </div>
                 </div>
@@ -39,7 +39,7 @@ export default function AboutUsPage() {
             {/* Core Mission */}
             <section className="py-24 px-6 lg:px-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 border-l-4 border-brand-red pl-4 mb-6">Our Core Mission</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 border-l-4 border-primary pl-4 mb-6">Our Core Mission</h2>
                     <p className="text-gray-600 leading-relaxed mb-6">
                         Cyber threats don&apos;t stop when you log off. Neither do we. Our single goal is to ensure that the internet remains a secure environment where innovation can flourish, data is protected, and everyday communication remains safe from bad actors.
                     </p>
@@ -50,7 +50,7 @@ export default function AboutUsPage() {
 
                 <div className="space-y-6">
                     <div className="flex items-start gap-4 p-6 rounded-2xl bg-red-50/50 border border-red-100">
-                        <div className="w-10 h-10 rounded-full bg-red-100 text-brand-red flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-red-100 text-primary flex items-center justify-center shrink-0">
                             &#128737;
                         </div>
                         <div>
@@ -70,7 +70,7 @@ export default function AboutUsPage() {
                     </div>
 
                     <div className="flex items-start gap-4 p-6 rounded-2xl bg-red-50/50 border border-red-100">
-                        <div className="w-10 h-10 rounded-full bg-red-100 text-brand-red flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-red-100 text-primary flex items-center justify-center shrink-0">
                             &#9888;
                         </div>
                         <div>
@@ -100,23 +100,23 @@ export default function AboutUsPage() {
                             <p className="text-gray-500 text-sm flex-1 mb-8">
                                 Clear guidance on securing devices, protecting children online, and avoiding phishing scams that target personal accounts.
                             </p>
-                            <Link href="/training" className="text-brand-red font-semibold text-sm hover:underline mt-auto">
+                            <Link href="/training" className="text-primary font-semibold text-sm hover:underline mt-auto">
                                 View Citizen Portal &rarr;
                             </Link>
                         </div>
 
-                        <div className="bg-white rounded-2xl p-8 border-2 border-brand-red shadow-md text-center flex flex-col h-full relative">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+                        <div className="bg-white rounded-2xl p-8 border-2 border-primary shadow-md text-center flex flex-col h-full relative">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
                                 Primary Focus
                             </div>
-                            <div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-brand-red flex items-center justify-center mb-6 mt-2">
+                            <div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-primary flex items-center justify-center mb-6 mt-2">
                                 &#128188;
                             </div>
                             <h3 className="text-xl font-semibold text-gray-900 mb-3">Small Businesses</h3>
                             <p className="text-gray-500 text-sm flex-1 mb-8">
                                 Scalable frameworks to protect IP, secure customer data, and recover from ransomware without large IT budgets.
                             </p>
-                            <Link href="/resources" className="text-brand-red font-semibold text-sm hover:underline mt-auto">
+                            <Link href="/resources" className="text-primary font-semibold text-sm hover:underline mt-auto">
                                 Explore Toolkits &rarr;
                             </Link>
                         </div>
@@ -129,7 +129,7 @@ export default function AboutUsPage() {
                             <p className="text-gray-500 text-sm flex-1 mb-8">
                                 Compliance frameworks, classified handling protocols, and multi-layered defense strategies for national infrastructure.
                             </p>
-                            <Link href="/resources" className="text-brand-red font-semibold text-sm hover:underline mt-auto">
+                            <Link href="/resources" className="text-primary font-semibold text-sm hover:underline mt-auto">
                                 Agency Login &rarr;
                             </Link>
                         </div>
@@ -138,7 +138,7 @@ export default function AboutUsPage() {
             </section>
 
             {/* Bottom CTA */}
-            <section className="bg-brand-red py-20 px-6 text-center text-white">
+            <section className="bg-primary py-20 px-6 text-center text-white">
                 <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-6">
                     &#128274;
                 </div>
@@ -147,7 +147,7 @@ export default function AboutUsPage() {
                     Join millions of other citizens who have taken the pledge to practice safe online behavior.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Button variant="primary" className="bg-white text-brand-red hover:bg-gray-100">Create Account</Button>
+                    <Button variant="primary" className="bg-white text-primary hover:bg-gray-100">Create Account</Button>
                     <Button variant="outline" className="border-white text-white hover:bg-white/10">Explore Courses</Button>
                 </div>
             </section>

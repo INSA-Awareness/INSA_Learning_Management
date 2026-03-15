@@ -1,11 +1,58 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { apiFetch, setTokens } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    const { checkAuth } = useAuth();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        const { data, error: apiError, status } = await apiFetch('/api/auth/login/', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+
+        if (apiError || status !== 200) {
+            setError(apiError || 'Failed to login. Please check your credentials.');
+            setIsLoading(false);
+            return;
+        }
+
+        if (data?.access) {
+            setTokens(data);
+            await checkAuth();
+            router.push('/dashboard');
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        setIsLoading(true);
+        setError('');
+        // TODO: Replace with the actual backend Google Auth endpoint once provided by user
+        // const token = credentialResponse.credential;
+        // const { data, error: apiError, status } = await apiFetch('/api/auth/google/', {
+        //     method: 'POST',
+        //     body: JSON.stringify({ token })
+        // });
+        console.log('Google credential response:', credentialResponse);
+        setError('Backend Google Auth endpoint not yet configured.');
+        setIsLoading(false);
+    };
     return (
         <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-20 bg-gray-50">
             <div className="w-full max-w-md bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
@@ -14,29 +61,40 @@ export default function LoginPage() {
                     Secure Access To The National Cyber Resilience Portal
                 </p>
 
-                <form className="space-y-5 text-left">
+                <form className="space-y-5 text-left" onSubmit={handleSubmit}>
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
+                            {error}
+                        </div>
+                    )}
                     <Input
                         label="Email Address"
                         type="email"
                         placeholder="example@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={isLoading}
                     />
 
                     <Input
                         label="Password"
                         type="password"
                         placeholder="At least 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
+                        disabled={isLoading}
                     />
 
                     <div className="flex justify-end">
-                        <Link href="/contact" className="text-sm font-medium text-brand-red hover:underline">
+                        <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">
                             Forgot Password?
                         </Link>
                     </div>
 
-                    <Button type="button" fullWidth className="bg-brand-dark hover:bg-black text-white py-3 rounded-lg" onClick={() => window.location.href = '/dashboard'}>
-                        Sign in
+                    <Button variant="secondary" type="submit" fullWidth className="py-3 rounded-lg" disabled={isLoading}>
+                        {isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
 
                     <div className="mt-6 mb-6">
@@ -50,15 +108,20 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <Button type="button" variant="primary" fullWidth className="py-3 rounded-lg bg-[#ea4335] hover:bg-[#d33c2e] text-white flex gap-2 items-center justify-center">
-                        <span className="bg-white text-[#ea4335] font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs">G</span>
-                        Sign in with Google
-                    </Button>
+                    <div className="flex justify-center">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => {
+                                setError('Google Sign-In Failed');
+                            }}
+                            useOneTap
+                        />
+                    </div>
                 </form>
 
                 <p className="mt-8 text-sm text-gray-600">
                     Don&apos;t you have an account?{' '}
-                    <Link href="/signup" className="font-semibold text-brand-red hover:underline">
+                    <Link href="/signup" className="font-semibold text-primary hover:underline">
                         Sign up
                     </Link>
                 </p>

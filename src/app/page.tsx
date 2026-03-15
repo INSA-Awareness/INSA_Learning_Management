@@ -11,13 +11,13 @@ export default function Home() {
         <div className="absolute top-0 left-1/4 -z-10 w-96 h-96 bg-red-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
         <div className="absolute -top-10 right-1/4 -z-10 w-96 h-96 bg-orange-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
 
-        <span className="text-brand-red text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-red"></span>
+        <span className="text-primary text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
           Official Government Portal
         </span>
 
         <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl max-w-3xl">
-          Building a <span className="text-brand-red">Cyber Resilient</span> Nation
+          Building a <span className="text-primary">Cyber Resilient</span> Nation
         </h1>
 
         <p className="mt-6 text-lg leading-8 text-gray-600 max-w-2xl">
@@ -31,13 +31,13 @@ export default function Home() {
 
         <div className="mt-16 pt-8 border-t border-gray-100 flex flex-wrap justify-center gap-x-12 gap-y-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 text-brand-red">&#9733;</span> Citizen Resource Hub
+            <span className="w-3 h-3 text-primary">&#9733;</span> Citizen Resource Hub
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 text-brand-red">&#9888;</span> Latest Cyber Alerts
+            <span className="w-3 h-3 text-primary">&#9888;</span> Latest Cyber Alerts
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 text-brand-red">&#9993;</span> Report Incident
+            <span className="w-3 h-3 text-primary">&#9993;</span> Report Incident
           </div>
         </div>
       </section>
@@ -53,14 +53,14 @@ export default function Home() {
           <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {/* Pillar 1 */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-left hover:shadow-md transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-red-50 text-brand-red flex items-center justify-center mb-6">
+              <div className="w-12 h-12 rounded-xl bg-red-50 text-primary flex items-center justify-center mb-6">
                 &#128218;
               </div>
               <h3 className="text-lg font-semibold text-gray-900">Educate & Train</h3>
               <p className="mt-3 text-gray-600 text-sm leading-relaxed mb-6">
                 Equipping all citizens and organizations with essential cybersecurity skills through interactive modules.
               </p>
-              <Link href="/training" className="text-brand-red font-semibold text-sm hover:underline flex items-center gap-1">
+              <Link href="/training" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1">
                 Explore Modules &rarr;
               </Link>
             </div>
@@ -100,7 +100,7 @@ export default function Home() {
       <section className="py-24 bg-white px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
           <div className="lg:col-span-1">
-            <span className="text-brand-red text-xs font-bold tracking-widest uppercase mb-4 block">Sector Specific</span>
+            <span className="text-primary text-xs font-bold tracking-widest uppercase mb-4 block">Sector Specific</span>
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Tailored Guidance for Every Sector</h2>
             <p className="mt-4 text-gray-600 leading-relaxed">
               Cyber threats don&apos;t stop when you log off. Access specialized resources, frameworks, and actionable advice crafted specifically for your sector&apos;s needs.
@@ -109,20 +109,20 @@ export default function Home() {
           </div>
 
           <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-red/30 transition-all group cursor-pointer">
-              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">Incident Response Playbooks</h4>
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer">
+              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">Incident Response Playbooks</h4>
               <p className="text-sm text-gray-600 line-clamp-2">Step-by-step guides for containing and eradicating active threats in your environment.</p>
             </div>
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-red/30 transition-all group cursor-pointer">
-              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">Compliance Frameworks</h4>
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer">
+              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">Compliance Frameworks</h4>
               <p className="text-sm text-gray-600 line-clamp-2">Mapped controls for ISO 27001, NIST CSF, and national cybersecurity mandates.</p>
             </div>
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-red/30 transition-all group cursor-pointer">
-              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">Threat Modeling Templates</h4>
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer">
+              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">Threat Modeling Templates</h4>
               <p className="text-sm text-gray-600 line-clamp-2">Standardized documentation for identifying architectural vulnerabilities before deployment.</p>
             </div>
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-brand-red/30 transition-all group cursor-pointer">
-              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">Security Awareness Kits</h4>
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group cursor-pointer">
+              <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">Security Awareness Kits</h4>
               <p className="text-sm text-gray-600 line-clamp-2">Printable posters, email templates, and presentation decks for internal campaigns.</p>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-brand-red rounded-full"></span> Recent Threat Alerts
+              <span className="w-1.5 h-6 bg-primary rounded-full"></span> Recent Threat Alerts
             </h2>
             <Link href="/dashboard" className="text-sm font-semibold text-gray-500 hover:text-gray-900">View All Alerts &rarr;</Link>
           </div>
@@ -145,9 +145,9 @@ export default function Home() {
                 <span className="text-xs font-bold text-red-500 uppercase tracking-wider bg-red-50 px-2 py-1 rounded">Critical</span>
                 <span className="text-xs text-gray-400">1 hour ago</span>
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">Global Ransomware Campaign</h4>
+              <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-primary transition-colors">Global Ransomware Campaign</h4>
               <p className="text-sm text-gray-600 mb-4 line-clamp-2">A coordinated ransomware attack is targeting national infrastructure. Ensure all systems are patched and offline backups are secured immediately.</p>
-              <Link href="/dashboard" className="text-xs font-semibold text-gray-900 underline group-hover:text-brand-red transition-colors">Read Details &rarr;</Link>
+              <Link href="/dashboard" className="text-xs font-semibold text-gray-900 underline group-hover:text-primary transition-colors">Read Details &rarr;</Link>
             </div>
 
             <div className="bg-white p-6 border-t-4 border-yellow-500 rounded-b-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 group">
@@ -174,7 +174,7 @@ export default function Home() {
       </section>
 
       {/* CTA Footer Section */}
-      <section className="py-24 bg-brand-dark px-6 lg:px-8 text-center text-white">
+      <section className="py-24 bg-secondary px-6 lg:px-8 text-center text-white">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Join the National Cyber Defense</h2>
           <p className="mt-4 text-gray-400 text-lg">

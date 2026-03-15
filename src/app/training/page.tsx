@@ -55,7 +55,7 @@ export default function TrainingPage() {
                     Expert-led training designed to empower you with the skills to identify threats and protect our digital nation. Simple. Powerful. Secure.
                 </p>
 
-                <div className="mt-8 max-w-xl w-full flex bg-white border border-gray-200 rounded-full p-2 shadow-sm focus-within:ring-2 focus-within:ring-brand-red focus-within:border-transparent transition-all">
+                <div className="mt-8 max-w-xl w-full flex bg-white border border-gray-200 rounded-full p-2 shadow-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all">
                     <div className="pl-4 flex items-center text-gray-400">
                         &#128269;
                     </div>
@@ -87,7 +87,7 @@ export default function TrainingPage() {
                                         checked={selectedAudience.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedAudience, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedAudience.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedAudience.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedAudience.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className="text-sm text-gray-600 group-hover:text-gray-900">{item}</span>
@@ -107,7 +107,7 @@ export default function TrainingPage() {
                                         checked={selectedDifficulty.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedDifficulty, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedDifficulty.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedDifficulty.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedDifficulty.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className={`text-sm ${selectedDifficulty.includes(item) ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>{item}</span>
@@ -127,7 +127,7 @@ export default function TrainingPage() {
                                         checked={selectedTopics.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedTopics, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedTopics.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedTopics.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedTopics.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className="text-sm text-gray-600 group-hover:text-gray-900">{item}</span>
@@ -146,7 +146,7 @@ export default function TrainingPage() {
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>Sort by:</span>
                             <select
-                                className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-red cursor-pointer"
+                                className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
                             >
@@ -174,7 +174,7 @@ export default function TrainingPage() {
                                         <div className="w-10 h-10 rounded-xl bg-orange-50 text-xl flex items-center justify-center mb-4 shrink-0 transition-transform group-hover:scale-110">
                                             {module.icon}
                                         </div>
-                                        <h4 className="font-bold text-gray-900 mb-2 group-hover:text-brand-red transition-colors">{module.title}</h4>
+                                        <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">{module.title}</h4>
                                         <p className="text-xs text-gray-500 mb-6 flex-1 line-clamp-3">
                                             Learn the basics of {module.title.toLowerCase()} and understand {module.topics.toLowerCase()} fundamentals to stay secure online.
                                         </p>

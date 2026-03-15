@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-red: #da294e;
-  --color-brand-red-hover: #b91c3d;
-  --color-brand-dark: #1e1e24; /* Adjusted base dark color */
-  --color-brand-darker: #151519;
-  --color-brand-gray: #f9fafb;
-  --color-brand-text: #4b5563;
-  --color-brand-border: #e5e7eb;
+  --color-primary: #dc2626;
+  /* Modern crisp red */
+  --color-primary-hover: #b91c3b;
+  --color-secondary: #1e293b;
+  /* Slate 800 - more attractive dark */
+  --color-secondary-hover: #0f172a;
+  /* Slate 900 */
+  --color-gray-bg: #f9fafb;
+  --color-gray-text: #4b5563;
+  --color-border: #e5e7eb;
 }
 
 :root {
@@ -17,7 +20,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: var(--color-brand-darker);
+    --background: var(--color-secondary-hover);
     --foreground: #f9fafb;
   }
 }

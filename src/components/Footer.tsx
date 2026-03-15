@@ -7,7 +7,7 @@ export const Footer: React.FC = () => {
             <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="col-span-1 md:col-span-1">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-5 h-5 bg-brand-red rounded-sm flex items-center justify-center">
+                        <div className="w-5 h-5 bg-primary rounded-sm flex items-center justify-center">
                             <div className="w-2.5 h-2.5 bg-white rounded-full" />
                         </div>
                         <span className="font-bold text-gray-900">CyberSafe Nation</span>
@@ -25,28 +25,28 @@ export const Footer: React.FC = () => {
                 <div>
                     <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wider">Platform</h4>
                     <ul className="space-y-3 text-sm text-gray-500">
-                        <li><Link href="/" className="hover:text-brand-red">Home</Link></li>
-                        <li><Link href="/training" className="hover:text-brand-red">Training Library</Link></li>
-                        <li><Link href="/resources" className="hover:text-brand-red">Resources</Link></li>
-                        <li><Link href="/dashboard" className="hover:text-brand-red">News & Alerts</Link></li>
+                        <li><Link href="/" className="hover:text-primary">Home</Link></li>
+                        <li><Link href="/training" className="hover:text-primary">Training Library</Link></li>
+                        <li><Link href="/resources" className="hover:text-primary">Resources</Link></li>
+                        <li><Link href="/dashboard" className="hover:text-primary">News & Alerts</Link></li>
                     </ul>
                 </div>
 
                 <div>
                     <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wider">Support</h4>
                     <ul className="space-y-3 text-sm text-gray-500">
-                        <li><Link href="/contact" className="hover:text-brand-red">Help Center</Link></li>
-                        <li><Link href="/contact" className="hover:text-brand-red">Contact Us</Link></li>
-                        <li><Link href="/contact" className="hover:text-brand-red">Report an Incident</Link></li>
+                        <li><Link href="/contact" className="hover:text-primary">Help Center</Link></li>
+                        <li><Link href="/contact" className="hover:text-primary">Contact Us</Link></li>
+                        <li><Link href="/contact" className="hover:text-primary">Report an Incident</Link></li>
                     </ul>
                 </div>
 
                 <div>
                     <h4 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wider">Legal</h4>
                     <ul className="space-y-3 text-sm text-gray-500">
-                        <li><Link href="/about" className="hover:text-brand-red">Privacy Policy</Link></li>
-                        <li><Link href="/about" className="hover:text-brand-red">Terms of Service</Link></li>
-                        <li><Link href="/about" className="hover:text-brand-red">Accessibility</Link></li>
+                        <li><Link href="/about" className="hover:text-primary">Privacy Policy</Link></li>
+                        <li><Link href="/about" className="hover:text-primary">Terms of Service</Link></li>
+                        <li><Link href="/about" className="hover:text-primary">Accessibility</Link></li>
                     </ul>
                 </div>
             </div>

@@ -90,7 +90,7 @@ export default function ResourcesPage() {
                                         checked={selectedType.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedType, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedType.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedType.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedType.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className={`text-sm ${selectedType.includes(item) ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>{item}</span>
@@ -113,7 +113,7 @@ export default function ResourcesPage() {
                                         checked={selectedAudience.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedAudience, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedAudience.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedAudience.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedAudience.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className={`text-sm ${selectedAudience.includes(item) ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>{item}</span>
@@ -133,7 +133,7 @@ export default function ResourcesPage() {
                                         checked={selectedDomain.includes(item)}
                                         onChange={() => handleCheckboxChange(setSelectedDomain, item)}
                                     />
-                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedDomain.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-brand-red'}`}>
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedDomain.includes(item) ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
                                         {selectedDomain.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
                                     </div>
                                     <span className={`text-sm ${selectedDomain.includes(item) ? 'text-gray-900 font-medium' : 'text-gray-600 group-hover:text-gray-900'}`}>{item}</span>
@@ -151,7 +151,7 @@ export default function ResourcesPage() {
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>Sort by:</span>
-                            <select className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-red cursor-pointer">
+                            <select className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer">
                                 <option>Most Relevant</option>
                                 <option>Recently Updated</option>
                                 <option>Most Downloaded</option>
