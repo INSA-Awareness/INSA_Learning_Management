@@ -5,9 +5,10 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'md' }) => {
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -29,7 +30,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div
-                className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all"
+                className={`bg-white rounded-2xl shadow-xl w-full max-w-${maxWidth} overflow-hidden transform transition-all`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">

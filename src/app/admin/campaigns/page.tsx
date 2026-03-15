@@ -1,0 +1,252 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
+import { Modal } from '@/components/Modal';
+
+interface Campaign {
+    id: string;
+    organization: string;
+    title: string;
+    message: string;
+    start_date: string;
+    send_time: string;
+    channels: string;
+    status: string;
+}
+
+interface Organization {
+    id: string;
+    name: string;
+}
+
+const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
+
+export default function AdminCampaignsPage() {
+    const { user, isAuthenticated, isLoading } = useAuth();
+    const router = useRouter();
+    const [camps, setCamps] = useState<Campaign[]>([]);
+    const [isFetching, setIsFetching] = useState(true);
+    const [error, setError] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const pageSize = 10;
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+    const [actionError, setActionError] = useState('');
+    const [selected, setSelected] = useState<Campaign | null>(null);
+    const [orgs, setOrgs] = useState<Organization[]>([]);
+    const [form, setForm] = useState({ organization: '', title: '', message: '', start_date: '', send_time: '', channels: 'email', status: 'draft' });
+
+    useEffect(() => {
+        if (!isLoading && isAuthenticated && (user?.role === 'super_admin' || user?.role === 'org_admin')) {
+            fetchOrgs();
+        }
+    }, [isAuthenticated, isLoading, user]);
+
+    useEffect(() => {
+        if (!isLoading) {
+            if (!isAuthenticated) router.push('/login');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else fetchAll();
+        }
+    }, [isAuthenticated, isLoading, user, router, page, searchTerm]);
+
+    const fetchOrgs = async () => {
+        const { data } = await apiFetch('/api/v1/organizations/');
+        if (data?.results) setOrgs(data.results);
+        else if (Array.isArray(data)) setOrgs(data);
+    };
+
+    const fetchAll = async () => {
+        setIsFetching(true); setError('');
+        const query = new URLSearchParams({
+            page: page.toString(),
+            page_size: pageSize.toString(),
+            search: searchTerm,
+            ordering: '-start_date'
+        }).toString();
+        const { data, error: e } = await apiFetch(`/api/v1/campaigns/?${query}`);
+        if (e) setError(e);
+        else if (data?.results) {
+            setCamps(data.results);
+            setTotalCount(data.count || 0);
+        }
+        else if (Array.isArray(data)) {
+            setCamps(data);
+            setTotalCount(data.length);
+        }
+        setIsFetching(false);
+    };
+
+    const openModal = (item?: Campaign) => {
+        setActionError('');
+        if (item) {
+            setSelected(item);
+            setForm({
+                organization: item.organization || '',
+                title: item.title,
+                message: item.message,
+                start_date: item.start_date.split('T')[0],
+                send_time: item.send_time ? (item.send_time.includes('T') ? item.send_time.split('T')[1].substring(0, 5) : item.send_time.substring(0, 5)) : '',
+                channels: item.channels || 'email',
+                status: item.status || 'draft'
+            });
+        } else {
+            setSelected(null);
+            setForm({ organization: '', title: '', message: '', start_date: '', send_time: '', channels: 'email', status: 'draft' });
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSubmit = async (ev: React.FormEvent) => {
+        ev.preventDefault(); setActionError(''); setIsActionLoading(true);
+        const isEditing = !!selected;
+        const endpoint = `/api/v1/campaigns/${isEditing ? `${selected!.id}/` : ''}`;
+        const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(form) });
+        if (apiErr || (status !== 200 && status !== 201)) setActionError(apiErr || 'Failed to save.');
+        else { fetchAll(); setIsModalOpen(false); }
+        setIsActionLoading(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Delete this campaign?')) return;
+        const { error: e, status } = await apiFetch(`/api/v1/campaigns/${id}/`, { method: 'DELETE' });
+        if (e || status !== 204) setError(e || 'Failed to delete.'); else fetchAll();
+    };
+
+    if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-20">
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-6 lg:px-12 py-8 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-1">Campaigns Management</h1>
+                        <p className="text-gray-500">Manage national cybersecurity awareness campaigns.</p>
+                    </div>
+                    <Button variant="primary" onClick={() => openModal()}>Add Campaign</Button>
+                </div>
+            </div>
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
+                {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
+
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="flex-1">
+                        <Input
+                            placeholder="Search campaigns by title or message..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left text-sm text-gray-500">
+                        <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-4">Title</th>
+                                <th className="px-6 py-4">Timeline</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {camps.length === 0 ? (
+                                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">No campaigns yet.</td></tr>
+                            ) : camps.map(c => (
+                                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-gray-900">{c.title}</div>
+                                        <div className="text-gray-500 truncate max-w-sm">{c.message}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-xs">
+                                        {new Date(c.start_date).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            {c.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                                        <button onClick={() => openModal(c)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
+                                        <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200">
+                    <span className="text-sm text-gray-500">Showing {camps.length} of {totalCount} results</span>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page <= 1 || isFetching}
+                            onClick={() => setPage(p => p - 1)}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={camps.length < pageSize && (page * pageSize) >= totalCount || isFetching}
+                            onClick={() => setPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            </div>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selected ? 'Edit Campaign' : 'Add Campaign'}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
+                    <Input label="Campaign Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Organization</label>
+                            <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} required disabled={isActionLoading}>
+                                <option value="">Select Organization</option>
+                                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                            </select>
+                        </div>
+                        <Input label="Channels (e.g. Email, SMS)" value={form.channels} onChange={e => setForm({ ...form, channels: e.target.value })} required disabled={isActionLoading} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input label="Start Date" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required disabled={isActionLoading} />
+                        <Input label="Send Time" type="time" value={form.send_time} onChange={e => setForm({ ...form, send_time: e.target.value })} required disabled={isActionLoading} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                        <select className={SELECT_CLS} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} disabled={isActionLoading}>
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Campaign Message</label>
+                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary outline-none transition-all min-h-[100px]" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required disabled={isActionLoading} />
+                    </div>
+                    <div className="pt-4 flex justify-end gap-3">
+                        <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isActionLoading}>Cancel</Button>
+                        <Button type="submit" variant="primary" disabled={isActionLoading}>{isActionLoading ? 'Saving...' : selected ? 'Save Changes' : 'Create Campaign'}</Button>
+                    </div>
+                </form>
+            </Modal>
+        </div>
+    );
+}

@@ -26,6 +26,9 @@ export default function DashboardPage() {
                 <div className="flex gap-6 text-sm font-semibold">
                     <Link href="/dashboard" className="text-primary border-b-2 border-primary pb-3 -mb-3">Dashboard</Link>
                     <Link href="/training" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Modules</Link>
+                    <Link href="/tools" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Awareness Tools</Link>
+                    <Link href="/alerts" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Alerts</Link>
+                    <Link href="/campaigns" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Campaigns</Link>
                     <Link href="/resources" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Library</Link>
                     <Link href="/contact" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Help</Link>
                 </div>
@@ -79,9 +82,11 @@ export default function DashboardPage() {
                             Phishing campaigns targeting public sector employees increased by 42%. Verify all &quot;Tax Refund&quot; communications immediately through the official portal.
                         </p>
                     </div>
-                    <button className="bg-white border border-orange-200 text-orange-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-50 shrink-0 mt-2 sm:mt-0">
-                        View Briefing
-                    </button>
+                    <Link href="/alerts">
+                        <button className="bg-white border border-orange-200 text-orange-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-50 shrink-0 mt-2 sm:mt-0">
+                            View Briefing
+                        </button>
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -193,18 +198,18 @@ export default function DashboardPage() {
                         <div>
                             <h2 className="text-sm font-bold text-primary tracking-wider uppercase mb-4">Quick Actions</h2>
                             <div className="space-y-3">
-                                <div className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group">
+                                <Link href="/tools/phishing" className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group w-full">
                                     <div className="w-10 h-10 rounded-full bg-red-50 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
                                         &#9888;
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-gray-900 text-sm">Report Incident</h4>
-                                        <p className="text-xs text-gray-500">Flag suspicious activity.</p>
+                                        <h4 className="font-bold text-gray-900 text-sm">Phishing Test</h4>
+                                        <p className="text-xs text-gray-500">Practice spotting threats.</p>
                                     </div>
                                     <div className="text-gray-300 group-hover:text-primary">&#11162;</div>
-                                </div>
+                                </Link>
 
-                                <div className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group">
+                                <Link href="/tools/password-strength" className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group w-full">
                                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors shrink-0">
                                         &#128274;
                                     </div>
@@ -213,7 +218,7 @@ export default function DashboardPage() {
                                         <p className="text-xs text-gray-500">Test credentials strength.</p>
                                     </div>
                                     <div className="text-gray-300 group-hover:text-primary">&#11162;</div>
-                                </div>
+                                </Link>
 
                                 <div className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group">
                                     <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0 font-bold">
@@ -272,7 +277,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div className="mt-5 pt-4 border-t border-gray-100 text-center">
-                                    <Link href="/training" className="text-[10px] font-bold text-orange-500 uppercase tracking-widest hover:underline">
+                                    <Link href="/alerts" className="text-[10px] font-bold text-orange-500 uppercase tracking-widest hover:underline">
                                         View Full Intel Briefing &rarr;
                                     </Link>
                                 </div>
