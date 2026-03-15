@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, Organization } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
@@ -28,13 +28,16 @@ export default function AdminUsersPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
 
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
         email: '',
         password: '',
-        role: 'user'
+        role: 'member',
+        organization_id: '',
+        preferred_language: 'en'
     });
 
     useEffect(() => {
@@ -46,9 +49,16 @@ export default function AdminUsersPage() {
                 router.push('/dashboard');
             } else {
                 fetchUsers();
+                fetchOrganizations();
             }
         }
     }, [isAuthenticated, isLoading, user, router]);
+
+    const fetchOrganizations = async () => {
+        const { data } = await apiFetch('/api/v1/organizations/');
+        if (data?.results) setOrganizations(data.results);
+        else if (Array.isArray(data)) setOrganizations(data);
+    };
 
     const fetchUsers = async () => {
         setIsFetching(true);
@@ -75,11 +85,21 @@ export default function AdminUsersPage() {
                 last_name: user.last_name,
                 email: user.email,
                 password: '', // Leave blank for edit unless changing
-                role: user.role || 'user'
+                role: user.role || 'member',
+                organization_id: '', // Role-specific creation only usually
+                preferred_language: 'en'
             });
         } else {
             setSelectedUser(null);
-            setFormData({ first_name: '', last_name: '', email: '', password: '', role: 'user' });
+            setFormData({
+                first_name: '',
+                last_name: '',
+                email: '',
+                password: '',
+                role: 'member',
+                organization_id: organizations[0]?.id || '',
+                preferred_language: 'en'
+            });
         }
         setIsModalOpen(true);
     };
@@ -98,8 +118,9 @@ export default function AdminUsersPage() {
         let endpoint = `/api/auth/users/${isEditing ? `${selectedUser.id}/` : ''}`;
         let method = isEditing ? 'PATCH' : 'POST';
 
-        // Role-specific creation endpoints mapped from user requirements
+        // Creation with specialized endpoints
         if (!isEditing) {
+            method = 'POST';
             switch (formData.role) {
                 case 'course_provider':
                     endpoint = '/api/auth/users/course-providers/';
@@ -114,7 +135,6 @@ export default function AdminUsersPage() {
                     endpoint = '/api/auth/users/super-admins/';
                     break;
                 default:
-                    // Regular users
                     endpoint = '/api/auth/users/';
                     break;
             }
@@ -124,18 +144,17 @@ export default function AdminUsersPage() {
             first_name: formData.first_name,
             last_name: formData.last_name,
             email: formData.email,
+            preferred_language: formData.preferred_language,
+            organization_id: formData.organization_id,
         };
 
-        if (formData.password) {
-            payload.password = formData.password;
+        // For regular user creation (if any) or editing, we might need password/role
+        if (endpoint === '/api/auth/users/' || isEditing) {
+            if (formData.password) payload.password = formData.password;
+            if (formData.role) payload.role = formData.role;
         }
 
-        // If editing, we also want to send the role if it was changed
-        if (isEditing) {
-            payload.role = formData.role;
-        }
-
-        const { error: apiError, status } = await apiFetch(endpoint, {
+        const { data, error: apiError, status } = await apiFetch(endpoint, {
             method,
             body: JSON.stringify(payload)
         });
@@ -143,7 +162,9 @@ export default function AdminUsersPage() {
         if (apiError || (status !== 200 && status !== 201)) {
             setActionError(apiError || `Failed to ${isEditing ? 'update' : 'create'} user.`);
         } else {
-            // Success
+            if (!isEditing && data?.default_password) {
+                alert(`User created successfully!\nDefault Password: ${data.default_password}`);
+            }
             fetchUsers();
             handleCloseModal();
         }
@@ -288,15 +309,41 @@ export default function AdminUsersPage() {
                         disabled={isActionLoading}
                     />
 
-                    <Input
-                        label={selectedUser ? "New Password (Optional)" : "Password"}
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required={!selectedUser}
-                        disabled={isActionLoading}
-                    />
+                    {!selectedUser && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Organization
+                                </label>
+                                <select
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                                    value={formData.organization_id}
+                                    onChange={(e) => setFormData({ ...formData, organization_id: e.target.value })}
+                                    disabled={isActionLoading}
+                                    required
+                                >
+                                    <option value="">Select Organization</option>
+                                    {organizations.map(org => (
+                                        <option key={org.id} value={org.id}>{org.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Language
+                                </label>
+                                <select
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                                    value={formData.preferred_language}
+                                    onChange={(e) => setFormData({ ...formData, preferred_language: e.target.value })}
+                                    disabled={isActionLoading}
+                                >
+                                    <option value="en">English</option>
+                                    <option value="am">Amharic</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -304,17 +351,29 @@ export default function AdminUsersPage() {
                         </label>
                         <select
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
-                            value={formData.role || 'user'}
+                            value={formData.role}
                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             disabled={isActionLoading}
                         >
-                            <option value="user">Regular User</option>
                             <option value="member">Member</option>
                             <option value="course_provider">Course Provider</option>
                             <option value="org_admin">Organization Admin</option>
                             <option value="super_admin">Super Admin</option>
+                            <option value="user">Regular User</option>
                         </select>
                     </div>
+
+                    {(formData.role === 'user' || selectedUser) && (
+                        <Input
+                            label={selectedUser ? "New Password (Optional)" : "Password"}
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            required={!selectedUser && formData.role === 'user'}
+                            disabled={isActionLoading}
+                        />
+                    )}
 
                     <div className="pt-4 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={handleCloseModal} disabled={isActionLoading}>
