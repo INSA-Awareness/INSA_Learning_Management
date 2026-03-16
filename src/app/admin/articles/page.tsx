@@ -7,11 +7,16 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface ArticleData {
     id: string;
     module: string;
     content: string;
+    category?: string;
+    difficulty?: string;
+    language?: string;
+    version?: string;
     order: number;
 }
 
@@ -30,10 +35,16 @@ export default function AdminArticlesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         module: '',
         content: '',
+        category: 'general',
+        difficulty: 'beginner',
+        language: 'en',
+        version: '1.0.0',
         order: 0
     });
 
@@ -41,7 +52,7 @@ export default function AdminArticlesPage() {
         if (!isLoading) {
             if (!isAuthenticated) {
                 router.push('/login');
-            } else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') {
+            } else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') {
                 router.push('/dashboard');
             } else {
                 fetchArticles();
@@ -80,11 +91,15 @@ export default function AdminArticlesPage() {
             setFormData({
                 module: article.module,
                 content: article.content,
+                category: article.category || 'general',
+                difficulty: article.difficulty || 'beginner',
+                language: article.language || 'en',
+                version: article.version || '1.0.0',
                 order: article.order
             });
         } else {
             setSelectedArticle(null);
-            setFormData({ module: '', content: '', order: 0 });
+            setFormData({ module: '', content: '', category: 'general', difficulty: 'beginner', language: 'en', version: '1.0.0', order: 0 });
         }
         setIsModalOpen(true);
     };
@@ -106,6 +121,10 @@ export default function AdminArticlesPage() {
         const payload = {
             module: formData.module,
             content: formData.content,
+            category: formData.category,
+            difficulty: formData.difficulty,
+            language: formData.language,
+            version: formData.version,
             order: Number(formData.order)
         };
 
@@ -123,11 +142,17 @@ export default function AdminArticlesPage() {
         setIsActionLoading(false);
     };
 
-    const handleDeleteArticle = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this article?')) return;
+    const handleDeleteArticle = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
         setError('');
 
-        const { error: apiError, status } = await apiFetch(`/api/v1/articles/${id}/`, {
+        const { error: apiError, status } = await apiFetch(`/api/v1/articles/${itemToDelete}/`, {
             method: 'DELETE'
         });
 
@@ -136,6 +161,9 @@ export default function AdminArticlesPage() {
         } else {
             fetchArticles();
         }
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) {
@@ -146,7 +174,7 @@ export default function AdminArticlesPage() {
         );
     }
 
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -263,15 +291,51 @@ export default function AdminArticlesPage() {
                         />
                     </div>
 
-                    <Input
-                        label="Order"
-                        type="number"
-                        name="order"
-                        value={formData.order}
-                        onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                        required
-                        disabled={isActionLoading}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                            <select className="block w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:ring-primary focus:border-primary outline-none" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} disabled={isActionLoading}>
+                                <option value="general">General</option>
+                                <option value="technical">Technical</option>
+                                <option value="behavioral">Behavioral</option>
+                                <option value="compliance">Compliance</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Difficulty</label>
+                            <select className="block w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:ring-primary focus:border-primary outline-none" value={formData.difficulty} onChange={e => setFormData({ ...formData, difficulty: e.target.value })} disabled={isActionLoading}>
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Language</label>
+                            <select className="block w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:ring-primary focus:border-primary outline-none" value={formData.language} onChange={e => setFormData({ ...formData, language: e.target.value })} disabled={isActionLoading}>
+                                <option value="en">English (en)</option>
+                                <option value="am">Amharic (am)</option>
+                                <option value="om">Oromo (om)</option>
+                            </select>
+                        </div>
+                        <Input
+                            label="Version"
+                            value={formData.version}
+                            onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                            disabled={isActionLoading}
+                        />
+                        <Input
+                            label="Order"
+                            type="number"
+                            name="order"
+                            value={formData.order}
+                            onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                            required
+                            disabled={isActionLoading}
+                        />
+                    </div>
 
                     <div className="pt-4 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={handleCloseModal} disabled={isActionLoading}>
@@ -283,6 +347,16 @@ export default function AdminArticlesPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Article"
+                message="Are you sure you want to delete this article? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

@@ -7,16 +7,21 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Course {
     id: string;
     title: string;
     description: string;
-    course_provider: string;
+    level?: string;
+    organization?: string;
+    course_provider?: string;
     status?: string;
-    difficulty?: string;
     language?: string;
+    is_active?: boolean;
 }
+
+interface OrgOption { id: string; name: string; }
 
 const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
@@ -24,6 +29,7 @@ export default function AdminCoursesPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [courses, setCourses] = useState<Course[]>([]);
+    const [orgs, setOrgs] = useState<OrgOption[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,17 +39,23 @@ export default function AdminCoursesPage() {
     const [form, setForm] = useState({
         title: '',
         description: '',
-        course_provider: '',
+        organization: '',
         language: 'en',
-        difficulty: 'beginner',
-        status: 'draft'
+        level: 'beginner',
+        status: 'draft',
+        is_active: true
     });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
-            else fetchCourses();
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
+            else {
+                fetchCourses();
+                fetchOrgs();
+            }
         }
     }, [isAuthenticated, isLoading, user, router]);
 
@@ -56,6 +68,12 @@ export default function AdminCoursesPage() {
         setIsFetching(false);
     };
 
+    const fetchOrgs = async () => {
+        const { data } = await apiFetch('/api/v1/organizations/');
+        if (data?.results) setOrgs(data.results);
+        else if (Array.isArray(data)) setOrgs(data);
+    };
+
     const openModal = (course?: Course) => {
         setActionError('');
         if (course) {
@@ -63,10 +81,11 @@ export default function AdminCoursesPage() {
             setForm({
                 title: course.title,
                 description: course.description,
-                course_provider: course.course_provider || '',
+                organization: course.organization || '',
                 language: course.language || 'en',
-                difficulty: course.difficulty || 'beginner',
-                status: course.status || 'draft'
+                level: course.level || 'beginner',
+                status: course.status || 'draft',
+                is_active: course.is_active !== false
             });
         }
         else {
@@ -74,10 +93,11 @@ export default function AdminCoursesPage() {
             setForm({
                 title: '',
                 description: '',
-                course_provider: '',
+                organization: '',
                 language: 'en',
-                difficulty: 'beginner',
-                status: 'draft'
+                level: 'beginner',
+                status: 'draft',
+                is_active: true
             });
         }
         setIsModalOpen(true);
@@ -87,20 +107,64 @@ export default function AdminCoursesPage() {
         ev.preventDefault(); setActionError(''); setIsActionLoading(true);
         const isEditing = !!selectedCourse;
         const endpoint = `/api/v1/courses/${isEditing ? `${selectedCourse!.id}/` : ''}`;
-        const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(form) });
+
+        // Build the payload to match the API schema
+        const payload: any = {
+            title: form.title,
+            description: form.description,
+            level: form.level,
+            language: form.language,
+            status: form.status,
+            is_active: form.is_active,
+        };
+
+        // Set course_provider to the current user's ID
+        if (!isEditing) {
+            payload.course_provider = user?.id;
+        }
+
+        // Include organization if selected
+        if (form.organization) {
+            payload.organization = form.organization;
+        }
+
+        const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
         if (apiErr || (status !== 200 && status !== 201)) { setActionError(apiErr || 'Failed to save course.'); }
         else { fetchCourses(); setIsModalOpen(false); }
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this course?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/courses/${id}/`, { method: 'DELETE' });
-        if (e || status !== 204) setError(e || 'Failed to delete.'); else fetchCourses();
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleStatusUpdate = async (id: string, newStatus: string) => {
+        setIsActionLoading(true);
+        const { error: apiErr } = await apiFetch(`/api/v1/courses/${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (apiErr) setActionError(apiErr);
+        else fetchCourses();
+        setIsActionLoading(false);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/courses/${itemToDelete}/`, { method: 'DELETE' });
+        if (e || status !== 204) setError(e || 'Failed to delete.');
+        else fetchCourses();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
+
+    const canPublish = user.role === 'super_admin';
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -120,28 +184,36 @@ export default function AdminCoursesPage() {
                         <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
                             <tr>
                                 <th className="px-6 py-4">Title</th>
-                                <th className="px-6 py-4">Provider</th>
+                                <th className="px-6 py-4">Level</th>
                                 <th className="px-6 py-4">Language</th>
-                                <th className="px-6 py-4">Difficulty</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {courses.length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">No courses yet.</td></tr>
+                                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No courses yet.</td></tr>
                             ) : courses.map(c => (
                                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-gray-900">{c.title}</td>
-                                    <td className="px-6 py-4">{c.course_provider || '—'}</td>
+                                    <td className="px-6 py-4 capitalize">{c.level || '—'}</td>
                                     <td className="px-6 py-4 uppercase text-xs">{c.language || '—'}</td>
-                                    <td className="px-6 py-4 capitalize">{c.difficulty || '—'}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'published' ? 'bg-green-50 text-green-700' : c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'published' ? 'bg-green-50 text-green-700' :
+                                                c.status === 'pending' ? 'bg-blue-50 text-blue-700' :
+                                                    c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' :
+                                                        'bg-gray-100 text-gray-600'
+                                            }`}>
                                             {c.status || 'draft'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right whitespace-nowrap">
+                                        {c.status === 'draft' && user.role === 'course_provider' && (
+                                            <button onClick={() => handleStatusUpdate(c.id, 'pending')} className="text-blue-600 hover:text-blue-800 font-medium mr-3 transition-colors">Submit</button>
+                                        )}
+                                        {c.status === 'pending' && user.role === 'super_admin' && (
+                                            <button onClick={() => handleStatusUpdate(c.id, 'published')} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Approve</button>
+                                        )}
                                         <button onClick={() => openModal(c)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
                                         <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
                                     </td>
@@ -155,10 +227,16 @@ export default function AdminCoursesPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
                     <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
-                    <Input label="Course Provider" value={form.course_provider} onChange={e => setForm({ ...form, course_provider: e.target.value })} required disabled={isActionLoading} placeholder="Organization or Individual name" />
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
                         <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px] resize-y" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Organization</label>
+                        <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} disabled={isActionLoading}>
+                            <option value="">Select Organization (optional)</option>
+                            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                        </select>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                         <div>
@@ -172,8 +250,8 @@ export default function AdminCoursesPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Difficulty</label>
-                            <select className={SELECT_CLS} value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })} disabled={isActionLoading}>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Level</label>
+                            <select className={SELECT_CLS} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} disabled={isActionLoading}>
                                 <option value="beginner">Beginner</option>
                                 <option value="intermediate">Intermediate</option>
                                 <option value="advanced">Advanced</option>
@@ -183,9 +261,10 @@ export default function AdminCoursesPage() {
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                             <select className={SELECT_CLS} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} disabled={isActionLoading}>
                                 <option value="draft">Draft</option>
-                                <option value="published">Published</option>
+                                {canPublish && <option value="published">Published</option>}
                                 <option value="archived">Archived</option>
                             </select>
+                            {!canPublish && <p className="text-[10px] text-gray-500 mt-1">Only System Admins can publish courses.</p>}
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3">
@@ -194,6 +273,16 @@ export default function AdminCoursesPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Course"
+                message="Are you sure you want to delete this course? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

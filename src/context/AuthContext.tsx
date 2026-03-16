@@ -9,7 +9,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     logout: () => void;
-    checkAuth: () => Promise<void>;
+    checkAuth: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,23 +18,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const checkAuth = async () => {
+    const checkAuth = async (): Promise<User | null> => {
         setIsLoading(true);
         const tokens = getTokens();
         if (!tokens?.access) {
             setUser(null);
             setIsLoading(false);
-            return;
+            return null;
         }
 
         const { data, status } = await apiFetch<User>('/api/auth/me/');
         if (status === 200 && data) {
             setUser(data);
+            setIsLoading(false);
+            return data;
         } else {
             setUser(null);
             clearTokens();
+            setIsLoading(false);
+            return null;
         }
-        setIsLoading(false);
     };
 
     useEffect(() => {

@@ -7,13 +7,17 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Module {
     id: string;
     course: string;
     title: string;
+    description?: string;
+    learning_objectives?: string;
+    version?: string;
     order: number;
-    course_title?: string; // Optional for display
+    course_title?: string;
 }
 
 interface Course {
@@ -45,13 +49,19 @@ export default function AdminModulesPage() {
     const [form, setForm] = useState({
         course: '',
         title: '',
+        description: '',
+        learning_objectives: '',
+        version: '1.0.0',
         order: 0
     });
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
             else {
                 fetchCourses();
                 fetchModules();
@@ -94,6 +104,9 @@ export default function AdminModulesPage() {
             setForm({
                 course: mod.course,
                 title: mod.title,
+                description: mod.description || '',
+                learning_objectives: mod.learning_objectives || '',
+                version: mod.version || '1.0.0',
                 order: mod.order
             });
         } else {
@@ -101,6 +114,9 @@ export default function AdminModulesPage() {
             setForm({
                 course: courses[0]?.id || '',
                 title: '',
+                description: '',
+                learning_objectives: '',
+                version: '1.0.0',
                 order: modules.length + 1
             });
         }
@@ -129,11 +145,20 @@ export default function AdminModulesPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this module?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/modules/${id}/`, { method: 'DELETE' });
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/modules/${itemToDelete}/`, { method: 'DELETE' });
         if (e || status !== 204) setError(e || 'Failed to delete module.');
         else fetchModules();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     const getCourseName = (courseId: string) => {
@@ -146,7 +171,7 @@ export default function AdminModulesPage() {
         </div>
     );
 
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -255,14 +280,44 @@ export default function AdminModulesPage() {
                         placeholder="e.g., Introduction to Phishing"
                     />
 
-                    <Input
-                        label="Display Order"
-                        type="number"
-                        value={form.order}
-                        onChange={e => setForm({ ...form, order: parseInt(e.target.value) || 0 })}
-                        required
-                        disabled={isActionLoading}
-                    />
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                        <textarea
+                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px]"
+                            value={form.description}
+                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            disabled={isActionLoading}
+                            placeholder="Briefly describe the module..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Learning Objectives</label>
+                        <textarea
+                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px]"
+                            value={form.learning_objectives}
+                            onChange={e => setForm({ ...form, learning_objectives: e.target.value })}
+                            disabled={isActionLoading}
+                            placeholder="What will students learn? (One per line)"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="Version"
+                            value={form.version}
+                            onChange={e => setForm({ ...form, version: e.target.value })}
+                            disabled={isActionLoading}
+                        />
+                        <Input
+                            label="Display Order"
+                            type="number"
+                            value={form.order}
+                            onChange={e => setForm({ ...form, order: parseInt(e.target.value) || 0 })}
+                            required
+                            disabled={isActionLoading}
+                        />
+                    </div>
 
                     <div className="pt-4 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isActionLoading}>Cancel</Button>
@@ -272,6 +327,16 @@ export default function AdminModulesPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Module"
+                message="Are you sure you want to delete this module? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

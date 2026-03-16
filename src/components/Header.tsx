@@ -12,6 +12,7 @@ interface HeaderProps {
 const adminGroups = [
     {
         label: 'Content',
+        roles: ['super_admin', 'course_provider'],
         links: [
             { label: 'Courses', href: '/admin/courses' },
             { label: 'Modules', href: '/admin/modules' },
@@ -23,21 +24,24 @@ const adminGroups = [
     },
     {
         label: 'Users & Orgs',
+        roles: ['super_admin', 'org_admin'],
         links: [
             { label: 'Users', href: '/admin/users' },
-            { label: 'Organizations', href: '/admin/organizations' },
+            { label: 'Organizations', href: '/admin/organizations', roles: ['super_admin'] },
             { label: 'Memberships', href: '/admin/memberships' },
             { label: 'Training Requests', href: '/admin/training-requests' },
-            { label: 'Payment Approvals', href: '/admin/payment-approvals' },
+            { label: 'Payment Approvals', href: '/admin/payment-approvals', roles: ['super_admin'] },
         ]
     },
     {
         label: 'Engagement',
+        roles: ['super_admin', 'org_admin', 'course_provider'],
         links: [
-            { label: 'Campaigns', href: '/admin/campaigns' },
-            { label: 'Assessments', href: '/admin/assessments' },
-            { label: 'Reports', href: '/admin/reports' },
-            { label: 'Alerts', href: '/admin/alerts' },
+            { label: 'Campaigns', href: '/admin/campaigns', roles: ['super_admin', 'org_admin'] },
+            { label: 'Assessments', href: '/admin/assessments', roles: ['super_admin', 'course_provider'] },
+            { label: 'Reports', href: '/admin/reports', roles: ['super_admin', 'org_admin'] },
+            { label: 'Alerts', href: '/admin/alerts', roles: ['super_admin'] },
+            { label: 'Audit Logs', href: '/admin/audit-logs', roles: ['super_admin'] },
         ]
     }
 ];
@@ -78,7 +82,10 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
     const { user, isAuthenticated, logout } = useAuth();
     const pathname = usePathname();
 
-    const isAdmin = user?.role === 'super_admin' || user?.role === 'org_admin';
+    const isSystemAdmin = user?.role === 'super_admin';
+    const isOrgAdmin = user?.role === 'org_admin';
+    const isCourseProvider = user?.role === 'course_provider';
+    const isAnyAdmin = isSystemAdmin || isOrgAdmin || isCourseProvider;
 
     return (
         <header className="w-full h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50">
@@ -94,11 +101,10 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
             </div>
 
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-                {/* Standard Learner Links - Hiddden for Admin */}
-                {!isAdmin && (
+                {!isAnyAdmin && (
                     <>
                         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-                        {isAuthenticated && <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>}
+                        {isAuthenticated && <Link href="/dashboard" className={`hover:text-primary transition-colors ${pathname === '/dashboard' ? 'text-primary font-bold' : ''}`}>Dashboard</Link>}
                         <Link href="/training" className="hover:text-primary transition-colors">Training</Link>
                         <Link href="/resources" className="hover:text-primary transition-colors">Resources</Link>
                         <Link href="/tools" className="hover:text-primary transition-colors">Tools</Link>
@@ -112,17 +118,27 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
                 )}
 
                 {/* Admin Categorized Dropdowns */}
-                {isAuthenticated && isAdmin && (
+                {isAuthenticated && isAnyAdmin && (
                     <>
-                        <Link href="/admin" className={`hover:text-primary transition-colors ${pathname === '/admin' ? 'text-primary font-bold' : ''}`}>Admin Dashboard</Link>
-                        {adminGroups.map(group => (
-                            <NavDropdown
-                                key={group.label}
-                                label={group.label}
-                                links={group.links}
-                                active={group.links.some(l => pathname?.startsWith(l.href))}
-                            />
-                        ))}
+                        <Link href="/admin" className={`hover:text-primary transition-colors ${pathname === '/admin' ? 'text-primary font-bold' : ''}`}>
+                            {user.role === 'super_admin' ? 'Admin Dashboard' : user.role === 'org_admin' ? 'Org Dashboard' : 'Provider Dashboard'}
+                        </Link>
+                        {adminGroups
+                            .filter(group => !group.roles || group.roles.includes(user.role))
+                            .map(group => {
+                                const filteredLinks = group.links.filter(link => !link.roles || link.roles.includes(user.role));
+                                if (filteredLinks.length === 0) return null;
+
+                                return (
+                                    <NavDropdown
+                                        key={group.label}
+                                        label={group.label}
+                                        links={filteredLinks}
+                                        active={filteredLinks.some(l => pathname?.startsWith(l.href))}
+                                    />
+                                );
+                            })
+                        }
                     </>
                 )}
             </nav>

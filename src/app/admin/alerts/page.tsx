@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Alert {
     id: string;
@@ -30,11 +31,13 @@ export default function AdminAlertsPage() {
     const [actionError, setActionError] = useState('');
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [form, setForm] = useState({ title: '', message: '', severity: 'medium' });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin') router.push('/dashboard');
             else fetchAlerts();
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -70,14 +73,24 @@ export default function AdminAlertsPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this alert?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/alerts/${id}/`, { method: 'DELETE' });
-        if (e || status !== 204) setError(e || 'Failed to delete.'); else fetchAlerts();
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/alerts/${itemToDelete}/`, { method: 'DELETE' });
+        if (e || status !== 204) setError(e || 'Failed to delete.');
+        else fetchAlerts();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || user.role !== 'super_admin') return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -109,8 +122,8 @@ export default function AdminAlertsPage() {
                                 <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${a.severity === 'critical' ? 'bg-red-50 text-red-700' :
-                                                a.severity === 'high' ? 'bg-orange-50 text-orange-700' :
-                                                    'bg-blue-50 text-blue-700'
+                                            a.severity === 'high' ? 'bg-orange-50 text-orange-700' :
+                                                'bg-blue-50 text-blue-700'
                                             }`}>
                                             {a.severity}
                                         </span>
@@ -153,6 +166,16 @@ export default function AdminAlertsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Alert"
+                message="Are you sure you want to delete this alert? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

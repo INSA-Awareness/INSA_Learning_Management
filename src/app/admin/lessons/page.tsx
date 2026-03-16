@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Lesson {
     id: string;
@@ -61,10 +62,13 @@ export default function AdminLessonsPage() {
         order: 0
     });
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
             else {
                 fetchModules();
                 fetchLessons();
@@ -156,11 +160,20 @@ export default function AdminLessonsPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this lesson?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/lessons/${id}/`, { method: 'DELETE' });
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/lessons/${itemToDelete}/`, { method: 'DELETE' });
         if (e || status !== 204) setError(e || 'Failed to delete lesson.');
         else fetchLessons();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     const getModuleName = (moduleId: string) => {
@@ -173,7 +186,7 @@ export default function AdminLessonsPage() {
         </div>
     );
 
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -401,6 +414,16 @@ export default function AdminLessonsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Lesson"
+                message="Are you sure you want to delete this lesson? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

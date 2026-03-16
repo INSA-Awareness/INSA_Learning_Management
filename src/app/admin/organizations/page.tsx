@@ -7,8 +7,9 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
-interface Organization { id: string; name: string; status?: string; is_active?: boolean; member_count?: number; created_at?: string; }
+interface Organization { id: string; name: string; status: 'pending' | 'approved' | 'rejected'; is_active?: boolean; member_count?: number; created_at?: string; }
 
 export default function AdminOrganizationsPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
@@ -21,11 +22,13 @@ export default function AdminOrganizationsPage() {
     const [actionError, setActionError] = useState('');
     const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
     const [form, setForm] = useState({ name: '' });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin') router.push('/dashboard');
             else fetchOrgs();
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -46,24 +49,46 @@ export default function AdminOrganizationsPage() {
         setIsModalOpen(true);
     };
 
+    const handleStatusUpdate = async (id: string, newStatus: 'approved' | 'rejected') => {
+        setIsActionLoading(true);
+        const { error: apiErr, status } = await apiFetch(`/api/v1/organizations/${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus, is_active: newStatus === 'approved' })
+        });
+        if (apiErr) setActionError(apiErr);
+        else fetchOrgs();
+        setIsActionLoading(false);
+    };
+
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault(); setActionError(''); setIsActionLoading(true);
         const isEditing = !!selectedOrg;
         const endpoint = `/api/v1/organizations/${isEditing ? `${selectedOrg!.id}/` : ''}`;
-        const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(form) });
-        if (apiErr || (status !== 200 && status !== 201)) setActionError(apiErr || 'Failed to save.');
+        const payload = isEditing ? form : { ...form, status: 'approved', is_active: true }; // New ones created by admin are approved by default
+        const { error: apiErr, status: httpStatus } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+        if (apiErr || (httpStatus !== 200 && httpStatus !== 201)) setActionError(apiErr || 'Failed to save.');
         else { fetchOrgs(); setIsModalOpen(false); }
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this organization?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/organizations/${id}/`, { method: 'DELETE' });
-        if (e || status !== 204) setError(e || 'Failed to delete.'); else fetchOrgs();
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/organizations/${itemToDelete}/`, { method: 'DELETE' });
+        if (e || status !== 204) setError(e || 'Failed to delete.');
+        else fetchOrgs();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || user.role !== 'super_admin') return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -95,12 +120,21 @@ export default function AdminOrganizationsPage() {
                                 <tr key={o.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-gray-900">{o.name}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${o.is_active !== false ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                            {o.is_active !== false ? 'Active' : 'Inactive'}
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${o.status === 'approved' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                o.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                    'bg-yellow-50 text-yellow-700 border-yellow-100'
+                                            }`}>
+                                            {o.status || 'pending'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
                                     <td className="px-6 py-4 text-right whitespace-nowrap">
+                                        {o.status === 'pending' && (
+                                            <>
+                                                <button onClick={() => handleStatusUpdate(o.id, 'approved')} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Approve</button>
+                                                <button onClick={() => handleStatusUpdate(o.id, 'rejected')} className="text-red-600 hover:text-red-800 font-medium mr-3 transition-colors">Reject</button>
+                                            </>
+                                        )}
                                         <button onClick={() => openModal(o)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
                                         <button onClick={() => handleDelete(o.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
                                     </td>
@@ -120,6 +154,16 @@ export default function AdminOrganizationsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Organization"
+                message="Are you sure you want to delete this organization? All linked users and data might be affected."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

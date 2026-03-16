@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Membership {
     id: string;
@@ -54,6 +55,9 @@ export default function AdminMembershipsPage() {
         employee_id: '',
         is_primary: false
     });
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
@@ -147,11 +151,20 @@ export default function AdminMembershipsPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Remove this membership?')) return;
-        const { error: e, status } = await apiFetch(`/api/v1/memberships/${id}/`, { method: 'DELETE' });
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/memberships/${itemToDelete}/`, { method: 'DELETE' });
         if (e || status !== 204) setError(e || 'Failed to delete.');
         else fetchMemberships();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     const getUserLabel = (id: string) => {
@@ -354,6 +367,16 @@ export default function AdminMembershipsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Remove Membership"
+                message="Are you sure you want to remove this membership? This user will lose access to the organization's resources."
+                confirmText="Remove"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

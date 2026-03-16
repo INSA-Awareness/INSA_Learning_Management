@@ -35,8 +35,13 @@ export default function LoginPage() {
 
         if (data?.access) {
             setTokens(data);
-            await checkAuth();
-            router.push('/dashboard');
+            const loggedInUser = await checkAuth();
+            const role = loggedInUser?.role;
+            if (role === 'super_admin' || role === 'org_admin' || role === 'course_provider') {
+                router.push('/admin');
+            } else {
+                router.push('/dashboard');
+            }
         }
     };
 

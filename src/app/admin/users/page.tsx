@@ -7,6 +7,7 @@ import { apiFetch, Organization } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface UserData {
     id: string;
@@ -29,6 +30,8 @@ export default function AdminUsersPage() {
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
     const [organizations, setOrganizations] = useState<Organization[]>([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -145,7 +148,7 @@ export default function AdminUsersPage() {
             last_name: formData.last_name,
             email: formData.email,
             preferred_language: formData.preferred_language,
-            organization_id: formData.organization_id,
+            organization_id: formData.organization_id
         };
 
         // For regular user creation (if any) or editing, we might need password/role
@@ -160,7 +163,8 @@ export default function AdminUsersPage() {
         });
 
         if (apiError || (status !== 200 && status !== 201)) {
-            setActionError(apiError || `Failed to ${isEditing ? 'update' : 'create'} user.`);
+            const displayError = status ? `Error ${status}: ${apiError}` : (apiError || 'An unexpected error occurred.');
+            setActionError(displayError);
         } else {
             if (!isEditing && data?.default_password) {
                 alert(`User created successfully!\nDefault Password: ${data.default_password}`);
@@ -171,11 +175,17 @@ export default function AdminUsersPage() {
         setIsActionLoading(false);
     };
 
-    const handleDeleteUser = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this user?')) return;
+    const handleDeleteUser = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
         setError('');
 
-        const { error: apiError, status } = await apiFetch(`/api/auth/users/${id}/`, {
+        const { error: apiError, status } = await apiFetch(`/api/auth/users/${itemToDelete}/`, {
             method: 'DELETE'
         });
 
@@ -184,6 +194,9 @@ export default function AdminUsersPage() {
         } else {
             fetchUsers();
         }
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) {
@@ -385,6 +398,16 @@ export default function AdminUsersPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete User"
+                message="Are you sure you want to delete this user? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

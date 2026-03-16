@@ -7,6 +7,7 @@ import { getVideos, createVideo, updateVideo, deleteVideo, Video } from '@/lib/a
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 export default function AdminVideosPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
@@ -19,11 +20,13 @@ export default function AdminVideosPage() {
     const [actionError, setActionError] = useState('');
     const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
     const [form, setForm] = useState({ module: '', video_url: '', duration: 0, order: 0 });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
             else fetchVideos();
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -65,14 +68,24 @@ export default function AdminVideosPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this video?')) return;
-        const { error: e } = await deleteVideo(id);
-        if (e) setError(e || 'Failed to delete.'); else fetchVideos();
+    const handleDelete = (id: string) => {
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsActionLoading(true);
+        const { error: e } = await deleteVideo(itemToDelete);
+        if (e) setError(e || 'Failed to delete.');
+        else fetchVideos();
+        setIsDeleteModalOpen(false);
+        setItemToDelete(null);
+        setIsActionLoading(false);
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -134,6 +147,16 @@ export default function AdminVideosPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Video"
+                message="Are you sure you want to delete this video? This action cannot be undone."
+                confirmText="Delete"
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }

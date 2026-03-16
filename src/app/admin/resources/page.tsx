@@ -7,6 +7,7 @@ import { getResources, createResource, updateResource, deleteResource, publishRe
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
@@ -30,10 +31,26 @@ export default function AdminResourcesPage() {
         status: 'draft' | 'published';
     }>({ organization: '', title: '', content: '', file_url: '', category: '', audience: '', status: 'draft' });
 
+    const [confirmConfig, setConfirmConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        onConfirm: () => void;
+        variant: 'danger' | 'warning' | 'info';
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        confirmText: '',
+        onConfirm: () => { },
+        variant: 'danger'
+    });
+
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
             else fetchResources();
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -78,20 +95,46 @@ export default function AdminResourcesPage() {
         setIsActionLoading(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Delete this resource?')) return;
-        const { error: e } = await deleteResource(id);
-        if (e) setError(e || 'Failed to delete.'); else fetchResources();
+    const handleDelete = (id: string) => {
+        setConfirmConfig({
+            isOpen: true,
+            title: 'Delete Resource',
+            message: 'Are you sure you want to delete this resource? This action cannot be undone.',
+            confirmText: 'Delete',
+            variant: 'danger',
+            onConfirm: async () => {
+                setIsActionLoading(true);
+                const { error: e } = await deleteResource(id);
+                if (e) setError(e || 'Failed to delete.');
+                else fetchResources();
+                setIsActionLoading(false);
+                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
-    const handlePublish = async (id: string) => {
-        if (!window.confirm('Publish this resource?')) return;
-        const { error: e } = await publishResource(id, {});
-        if (e) setError(e || 'Failed to publish.'); else fetchResources();
+    const handlePublish = (id: string) => {
+        setConfirmConfig({
+            isOpen: true,
+            title: 'Publish Resource',
+            message: 'Are you sure you want to publish this resource? It will be visible to its target audience.',
+            confirmText: 'Publish',
+            variant: 'info',
+            onConfirm: async () => {
+                setIsActionLoading(true);
+                const { error: e } = await publishResource(id, {});
+                if (e) setError(e || 'Failed to publish.');
+                else fetchResources();
+                setIsActionLoading(false);
+                setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
+
+    const canPublish = user.role === 'super_admin';
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -132,7 +175,7 @@ export default function AdminResourcesPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right whitespace-nowrap">
-                                        {r.status === 'draft' && (
+                                        {r.status === 'draft' && canPublish && (
                                             <button onClick={() => handlePublish(r.id)} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Publish</button>
                                         )}
                                         <button onClick={() => openModal(r)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
@@ -164,8 +207,9 @@ export default function AdminResourcesPage() {
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                             <select className={SELECT_CLS} value={form.status} onChange={e => setForm({ ...form, status: e.target.value as any })} disabled={isActionLoading}>
                                 <option value="draft">Draft</option>
-                                <option value="published">Published</option>
+                                {canPublish && <option value="published">Published</option>}
                             </select>
+                            {!canPublish && <p className="text-[10px] text-gray-500 mt-1">Contact admin for publishing.</p>}
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3">
@@ -174,6 +218,17 @@ export default function AdminResourcesPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={confirmConfig.isOpen}
+                onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmConfig.onConfirm}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                confirmText={confirmConfig.confirmText}
+                variant={confirmConfig.variant}
+                isLoading={isActionLoading}
+            />
         </div>
     );
 }
