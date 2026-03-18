@@ -3,20 +3,29 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getResources, createResource, updateResource, deleteResource, publishResource, Resource } from '@/lib/api';
+import { getResources, createResource, updateResource, deleteResource, publishResource, Resource, getOrganizations, apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { CloudinaryUpload } from '@/components/CloudinaryUpload';
+import { toast } from 'react-hot-toast';
 
-const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
+const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white font-medium";
+
+interface OrgOption { id: string; name: string; }
 
 export default function AdminResourcesPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [resources, setResources] = useState<Resource[]>([]);
+    const [orgs, setOrgs] = useState<OrgOption[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const pageSize = 10;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [actionError, setActionError] = useState('');
@@ -51,16 +60,61 @@ export default function AdminResourcesPage() {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
             else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
-            else fetchResources();
+            else {
+                fetchResources();
+                fetchOrgs();
+            }
         }
-    }, [isAuthenticated, isLoading, user, router]);
+    }, [isAuthenticated, isLoading, user, router, page, searchTerm]);
+
+    const fetchOrgs = async () => {
+        const { data } = await getOrganizations({ page_size: 100 });
+        let fetchedOrgs: OrgOption[] = [];
+        if (data?.results) fetchedOrgs = data.results;
+        else if (Array.isArray(data)) fetchedOrgs = data;
+
+        setOrgs(fetchedOrgs);
+
+        // Auto-select if only one org exists
+        if (fetchedOrgs.length === 1 && !form.organization) {
+            setForm(prev => ({ ...prev, organization: fetchedOrgs[0].id }));
+        }
+    };
 
     const fetchResources = async () => {
         setIsFetching(true); setError('');
-        const { data, error: e } = await getResources();
-        if (e) setError(e);
-        else if (data?.results) setResources(data.results);
-        setIsFetching(false);
+        try {
+            const searchParams = new URLSearchParams({
+                page: page.toString(),
+                page_size: pageSize.toString(),
+                search: searchTerm,
+                ordering: '-created_at'
+            });
+
+            const url = `/api/v1/resources/?${searchParams.toString()}`;
+            console.log('Fetching resources from:', url);
+
+            const { data, error: e, status } = await apiFetch(url);
+            console.log('Fetch Results:', { status, data, error: e });
+
+            if (e) {
+                setError(e);
+                console.error('Fetch error:', e);
+            }
+            else if (data?.results) {
+                setResources(data.results);
+                setTotalCount(data.count || 0);
+            }
+            else if (Array.isArray(data)) {
+                setResources(data);
+                setTotalCount(data.length);
+            }
+        } catch (err: any) {
+            console.error('Unexpected fetch error:', err);
+            setError(err.message || 'An unexpected error occurred.');
+        } finally {
+            setIsFetching(false);
+        }
     };
 
     const openModal = (res?: Resource) => {
@@ -85,13 +139,30 @@ export default function AdminResourcesPage() {
 
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault(); setActionError(''); setIsActionLoading(true);
+
+        if (!form.organization) {
+            setActionError('Please select an organization.');
+            setIsActionLoading(false);
+            return;
+        }
+
         const isEditing = !!selectedResource;
-        const { error: apiErr } = isEditing
+        const { data, error: apiErr, status } = isEditing
             ? await updateResource(selectedResource!.id, form)
             : await createResource(form);
 
-        if (apiErr) { setActionError(apiErr || 'Failed to save resource.'); }
-        else { fetchResources(); setIsModalOpen(false); }
+        if (apiErr || (status !== 200 && status !== 201)) {
+            console.error('Resource Save Error:', { error: apiErr, status, data });
+            const msg = apiErr || 'Failed to save resource.';
+            setActionError(msg);
+            toast.error(msg);
+        }
+        else {
+            console.log('Resource Save Success:', { status, data });
+            toast.success(selectedResource ? 'Resource updated successfully!' : 'Resource created successfully!');
+            fetchResources();
+            setIsModalOpen(false);
+        }
         setIsActionLoading(false);
     };
 
@@ -144,12 +215,27 @@ export default function AdminResourcesPage() {
                         <h1 className="text-3xl font-bold text-gray-900 mb-1">Resources Management</h1>
                         <p className="text-gray-500">Manage and publish learning resources.</p>
                     </div>
-                    <Button variant="primary" onClick={() => openModal()}>Add Resource</Button>
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => fetchResources()}>Refresh</Button>
+                        <Button variant="primary" onClick={() => openModal()}>Add Resource</Button>
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
                 {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
+
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="flex-1">
+                        <Input
+                            placeholder="Search resources by title or category..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                        />
+                    </div>
+                </div>
+
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <table className="w-full text-left text-sm text-gray-500">
                         <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
@@ -186,20 +272,63 @@ export default function AdminResourcesPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                <div className="mt-6 flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200">
+                    <span className="text-sm text-gray-500">Showing {resources.length} of {totalCount} results</span>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page <= 1 || isFetching}
+                            onClick={() => setPage(p => p - 1)}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={resources.length < pageSize && (page * pageSize) >= totalCount || isFetching}
+                            onClick={() => setPage(p => p + 1)}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedResource ? 'Edit Resource' : 'Add Resource'}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
-                        <Input label="Organization UUID" value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} required disabled={isActionLoading} />
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Organization <span className="text-red-500">*</span></label>
+                            <select
+                                className={SELECT_CLS}
+                                value={form.organization}
+                                onChange={e => setForm({ ...form, organization: e.target.value })}
+                                required
+                                disabled={isActionLoading}
+                            >
+                                <option value="">Select Organization</option>
+                                {orgs.map(o => (
+                                    <option key={o.id} value={o.id}>{o.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Content</label>
                         <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[100px] resize-y" value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} disabled={isActionLoading} />
                     </div>
-                    <Input label="File URL" value={form.file_url} onChange={e => setForm({ ...form, file_url: e.target.value })} disabled={isActionLoading} placeholder="https://..." />
+                    <CloudinaryUpload
+                        label="Resource File"
+                        resourceType="auto"
+                        value={form.file_url}
+                        onUploadSuccess={(url) => setForm({ ...form, file_url: url })}
+                        className="mb-4"
+                    />
                     <div className="grid grid-cols-3 gap-3">
                         <Input label="Category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required disabled={isActionLoading} />
                         <Input label="Audience" value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value })} required disabled={isActionLoading} />

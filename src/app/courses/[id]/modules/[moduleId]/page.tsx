@@ -71,7 +71,7 @@ export default function ModuleContentPage() {
                 <div>
                     <div className="text-4xl mb-4">📂</div>
                     <p className="text-red-600 font-bold mb-4">{error || 'Module not found.'}</p>
-                    <Link href={`/training/${courseId}`} className="text-primary hover:underline font-bold">← Return to Course</Link>
+                    <Link href={`/courses/${courseId}`} className="text-primary hover:underline font-bold">← Return to Course</Link>
                 </div>
             </div>
         );
@@ -82,7 +82,7 @@ export default function ModuleContentPage() {
             {/* Top Reader Bar */}
             <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100">
                 <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <Link href={`/training/${courseId}`} className="text-xs font-bold text-gray-400 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-2">
+                    <Link href={`/courses/${courseId}`} className="text-xs font-bold text-gray-400 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-2">
                         ← Exit Reader
                     </Link>
                     <div className="text-center flex-1 mx-4">
@@ -135,7 +135,7 @@ export default function ModuleContentPage() {
 
                 <div className="mt-24 pt-12 border-t border-gray-100 flex flex-col items-center">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-4 text-center block">END OF MODULE</span>
-                    <Link href={`/training/${courseId}`}>
+                    <Link href={`/courses/${courseId}`}>
                         <Button variant="outline">Continue to next module</Button>
                     </Link>
                 </div>

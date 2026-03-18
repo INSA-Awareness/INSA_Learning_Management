@@ -10,6 +10,7 @@ import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Assessment { id: string; title?: string; module?: string; passing_score?: number; total_questions?: number; order?: number; }
+interface ModuleOption { id: string; title: string; }
 
 const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
@@ -17,6 +18,7 @@ export default function AdminAssessmentsPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [items, setItems] = useState<Assessment[]>([]);
+    const [modules, setModules] = useState<ModuleOption[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -36,9 +38,18 @@ export default function AdminAssessmentsPage() {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
             else if (user?.role !== 'super_admin' && user?.role !== 'course_provider') router.push('/dashboard');
-            else fetchAll();
+            else {
+                fetchAll();
+                fetchModules();
+            }
         }
     }, [isAuthenticated, isLoading, user, router, page, searchTerm]);
+
+    const fetchModules = async () => {
+        const { data } = await apiFetch('/api/v1/modules/?page_size=100');
+        if (data?.results) setModules(data.results);
+        else if (Array.isArray(data)) setModules(data);
+    };
 
     const fetchAll = async () => {
         setIsFetching(true);
@@ -179,7 +190,21 @@ export default function AdminAssessmentsPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
                     <Input label="Assessment Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
-                    <Input label="Module UUID" value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required disabled={isActionLoading} placeholder="123e4567-e89b-12d3-a456-..." />
+                    <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Module <span className="text-red-500">*</span></label>
+                        <select
+                            className={SELECT_CLS}
+                            value={form.module}
+                            onChange={e => setForm({ ...form, module: e.target.value })}
+                            required
+                            disabled={isActionLoading}
+                        >
+                            <option value="">Select Module</option>
+                            {modules.map(m => (
+                                <option key={m.id} value={m.id}>{m.title}</option>
+                            ))}
+                        </select>
+                    </div>
                     <Input label="Passing Score (%)" type="number" value={form.passing_score} onChange={e => setForm({ ...form, passing_score: parseInt(e.target.value) || 0 })} required disabled={isActionLoading} />
                     <Input label="Order" type="number" value={form.order} onChange={e => setForm({ ...form, order: parseInt(e.target.value) || 0 })} required disabled={isActionLoading} />
                     <div className="pt-4 flex justify-end gap-3">

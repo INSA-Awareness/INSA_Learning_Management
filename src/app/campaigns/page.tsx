@@ -85,7 +85,7 @@ export default function CampaignsPage() {
                                     <p className="text-sm text-gray-500 leading-relaxed mb-8 flex-1">
                                         {camp.message}
                                     </p>
-                                    <Link href={`/training`} className="inline-block">
+                                    <Link href={`/courses`} className="inline-block">
                                         <button className="text-sm font-bold text-primary group-hover:underline flex items-center gap-2">
                                             Participate Now <span>→</span>
                                         </button>

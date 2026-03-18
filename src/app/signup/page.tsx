@@ -8,9 +8,11 @@ import { Input } from '@/components/Input';
 import { apiFetch, setTokens } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { toast } from 'react-hot-toast';
 
 export default function SignupPage() {
-    const [fullName, setFullName] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,21 +26,28 @@ export default function SignupPage() {
         e.preventDefault();
         setError('');
 
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters long');
+            toast.error('Password must be at least 8 characters long');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
+            toast.error('Passwords do not match');
             return;
         }
 
         if (!acceptedTerms) {
             setError('You must accept the terms of service');
+            toast.error('You must accept the terms of service');
             return;
         }
 
         setIsLoading(true);
 
-        const nameParts = fullName.trim().split(' ');
-        const first_name = nameParts[0] || '';
-        const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ' ';
+        const first_name = firstName.trim();
+        const last_name = lastName.trim();
 
         const { error: apiError, status } = await apiFetch('/api/auth/register/', {
             method: 'POST',
@@ -52,11 +61,14 @@ export default function SignupPage() {
         });
 
         if (apiError || status !== 201) {
-            setError(apiError || 'Failed to register. Please check your information.');
+            const errorMsg = apiError || 'Failed to register. Please check your information.';
+            setError(errorMsg);
+            toast.error(errorMsg);
             setIsLoading(false);
             return;
         }
 
+        toast.success('Account created successfully!');
         // Redirect to login on success
         router.push('/login');
     };
@@ -72,9 +84,25 @@ export default function SignupPage() {
         // });
         console.log('Google credential response:', credentialResponse);
         setError('Backend Google Auth endpoint not yet configured.');
+        toast.error('Backend Google Auth endpoint not yet configured.');
         setIsLoading(false);
         // if (data?.access) { ... }
     };
+
+    const getPasswordScore = (pass: string) => {
+        let score = 0;
+        if (!pass) return { score: 0, label: '', color: 'bg-gray-200' };
+        if (pass.length > 0 && pass.length < 8) return { score: 1, label: 'Weak', color: 'bg-red-500', w: 'w-1/4' };
+        score++;
+        if (/[A-Z]/.test(pass) && /[0-9]/.test(pass)) score++;
+        if (/[^A-Za-z0-9]/.test(pass)) score++;
+        if (pass.length > 12) score++;
+
+        if (score === 1) return { score, label: 'Fair', color: 'bg-yellow-400', w: 'w-2/4' };
+        if (score === 2) return { score, label: 'Good', color: 'bg-blue-500', w: 'w-3/4' };
+        return { score, label: 'Strong', color: 'bg-green-500', w: 'w-full' };
+    };
+    const passStrength = getPasswordScore(password);
     return (
         <div className="flex min-h-screen bg-white">
             {/* Left Pane - Dark */}
@@ -121,29 +149,32 @@ export default function SignupPage() {
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
                     <p className="text-gray-500 text-sm mb-8">Enter your credentials to access the secure portal.</p>
 
-                    {/* Progress Indicator */}
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="w-1/2 h-full bg-primary"></div>
-                        </div>
-                        <span className="text-xs font-bold text-primary tracking-widest whitespace-nowrap">STEP 1 OF 2</span>
-                    </div>
-
                     <form className="space-y-5" onSubmit={handleSubmit}>
                         {error && (
                             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
                                 {error}
                             </div>
                         )}
-                        <Input
-                            label="Full Legal Name"
-                            placeholder="John Doe"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                            disabled={isLoading}
-                            icon={<span className="text-gray-400">&#128100;</span>}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input
+                                label="First Name"
+                                placeholder="John"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                required
+                                disabled={isLoading}
+                                icon={<span className="text-gray-400">&#128100;</span>}
+                            />
+                            <Input
+                                label="Last Name"
+                                placeholder="Doe"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                required
+                                disabled={isLoading}
+                                icon={<span className="text-gray-400">&#128100;</span>}
+                            />
+                        </div>
 
                         <Input
                             label="Official Email Address"
@@ -157,16 +188,26 @@ export default function SignupPage() {
                         />
 
                         <div className="grid grid-cols-2 gap-4">
-                            <Input
-                                label="Password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                disabled={isLoading}
-                                icon={<span className="text-gray-400">&#128274;</span>}
-                            />
+                            <div className="space-y-1">
+                                <Input
+                                    label="Password"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    disabled={isLoading}
+                                    icon={<span className="text-gray-400">&#128274;</span>}
+                                />
+                                {password && (
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className={`h-full ${passStrength.color} ${passStrength.w} transition-all duration-300`}></div>
+                                        </div>
+                                        <span className={`text-[10px] font-bold ${passStrength.color.replace('bg-', 'text-')}`}>{passStrength.label}</span>
+                                    </div>
+                                )}
+                            </div>
                             <Input
                                 label="Confirm Password"
                                 type="password"
@@ -184,11 +225,19 @@ export default function SignupPage() {
                             <h5 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1">
                                 &#9432; Security Requirements:
                             </h5>
-                            <div className="grid grid-cols-2 gap-y-2 text-xs text-gray-500">
-                                <div className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-gray-400"></span> 12+ characters</div>
-                                <div className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-gray-400"></span> 1 uppercase letter</div>
-                                <div className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-gray-400"></span> 1 number</div>
-                                <div className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-gray-400"></span> 1 special char</div>
+                            <div className="grid grid-cols-2 gap-y-2 text-xs text-gray-500 transition-colors">
+                                <div className={`flex items-center gap-2 ${password.length >= 8 ? 'text-green-600 font-medium' : ''}`}>
+                                    <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] ${password.length >= 8 ? 'bg-green-500 text-white' : 'bg-gray-300 text-transparent'}`}>&#10003;</span> 8+ characters
+                                </div>
+                                <div className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? 'text-green-600 font-medium' : ''}`}>
+                                    <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] ${/[A-Z]/.test(password) ? 'bg-green-500 text-white' : 'bg-gray-300 text-transparent'}`}>&#10003;</span> 1 uppercase letter
+                                </div>
+                                <div className={`flex items-center gap-2 ${/[0-9]/.test(password) ? 'text-green-600 font-medium' : ''}`}>
+                                    <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] ${/[0-9]/.test(password) ? 'bg-green-500 text-white' : 'bg-gray-300 text-transparent'}`}>&#10003;</span> 1 number
+                                </div>
+                                <div className={`flex items-center gap-2 ${/[^A-Za-z0-9]/.test(password) ? 'text-green-600 font-medium' : ''}`}>
+                                    <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] ${/[^A-Za-z0-9]/.test(password) ? 'bg-green-500 text-white' : 'bg-gray-300 text-transparent'}`}>&#10003;</span> 1 special char
+                                </div>
                             </div>
                         </div>
 
@@ -210,7 +259,7 @@ export default function SignupPage() {
                         </div>
 
                         <Button type="submit" fullWidth className="mt-6" disabled={isLoading}>
-                            {isLoading ? 'Registering...' : 'Complete Registration \u2192'}
+                            {isLoading ? 'Creating Account...' : 'Create Account'}
                         </Button>
 
                         <div className="mt-8">

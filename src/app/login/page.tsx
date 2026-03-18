@@ -8,6 +8,7 @@ import { Input } from '@/components/Input';
 import { apiFetch, setTokens } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -28,7 +29,9 @@ export default function LoginPage() {
         });
 
         if (apiError || status !== 200) {
-            setError(apiError || 'Failed to login. Please check your credentials.');
+            const errorMsg = apiError || 'Failed to login. Please check your credentials.';
+            setError(errorMsg);
+            toast.error(errorMsg);
             setIsLoading(false);
             return;
         }
@@ -36,6 +39,7 @@ export default function LoginPage() {
         if (data?.access) {
             setTokens(data);
             const loggedInUser = await checkAuth();
+            toast.success('Welcome back!');
             const role = loggedInUser?.role;
             if (role === 'super_admin' || role === 'org_admin' || role === 'course_provider') {
                 router.push('/admin');
@@ -56,6 +60,7 @@ export default function LoginPage() {
         // });
         console.log('Google credential response:', credentialResponse);
         setError('Backend Google Auth endpoint not yet configured.');
+        toast.error('Backend Google Auth endpoint not yet configured.');
         setIsLoading(false);
     };
     return (

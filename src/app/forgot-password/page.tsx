@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { apiFetch } from '@/lib/api';
@@ -9,15 +11,12 @@ import { apiFetch } from '@/lib/api';
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
-    const [resetLink, setResetLink] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setSuccess(false);
-        setResetLink('');
         setIsLoading(true);
 
         const { data, error: apiError, status } = await apiFetch('/api/auth/password-reset/', {
@@ -26,17 +25,20 @@ export default function ForgotPasswordPage() {
         });
 
         if (apiError || status !== 200) {
-            setError(apiError || 'Failed to send password reset request.');
+            setError(apiError || 'Failed to generate reset token.');
+            toast.error(apiError || 'Failed to generate reset token.');
             setIsLoading(false);
             return;
         }
 
-        if (data?.uid && data?.token) {
-            setResetLink(`/reset-password?uid=${data.uid}&token=${data.token}`);
-        }
-
-        setSuccess(true);
+        toast.success('Reset token generated');
         setIsLoading(false);
+
+        if (data?.uid && data?.token) {
+            router.push(`/reset-password?uid=${data.uid}&token=${data.token}`);
+        } else {
+            router.push('/reset-password');
+        }
     };
 
     return (
@@ -53,19 +55,6 @@ export default function ForgotPasswordPage() {
                             {error}
                         </div>
                     )}
-                    {success && !resetLink && (
-                        <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-100">
-                            Password reset link has been sent to your email.
-                        </div>
-                    )}
-                    {success && resetLink && (
-                        <div className="bg-green-50 text-green-700 p-4 rounded-lg text-sm border border-green-100 flex flex-col gap-3">
-                            <span className="font-medium">Reset token generated successfully.</span>
-                            <Link href={resetLink} className="bg-primary hover:bg-primary-hover text-white text-center py-2.5 rounded-lg font-medium transition-colors">
-                                Proceed to Reset Password &rarr;
-                            </Link>
-                        </div>
-                    )}
 
                     <Input
                         label="Email Address"
@@ -74,11 +63,11 @@ export default function ForgotPasswordPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        disabled={isLoading || !!success}
+                        disabled={isLoading}
                     />
 
-                    <Button variant="secondary" type="submit" fullWidth className="py-3 rounded-lg" disabled={isLoading || !!success}>
-                        {isLoading ? 'Sending...' : 'Send Reset Link'}
+                    <Button variant="secondary" type="submit" fullWidth className="py-3 rounded-lg" disabled={isLoading}>
+                        {isLoading ? 'Generating...' : 'Generate Reset Token'}
                     </Button>
                 </form>
 

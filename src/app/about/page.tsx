@@ -100,7 +100,7 @@ export default function AboutUsPage() {
                             <p className="text-gray-500 text-sm flex-1 mb-8">
                                 Clear guidance on securing devices, protecting children online, and avoiding phishing scams that target personal accounts.
                             </p>
-                            <Link href="/training" className="text-primary font-semibold text-sm hover:underline mt-auto">
+                            <Link href="/courses" className="text-primary font-semibold text-sm hover:underline mt-auto">
                                 View Citizen Portal &rarr;
                             </Link>
                         </div>

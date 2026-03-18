@@ -85,7 +85,7 @@ export default function SelfAssessmentPage() {
                     <p className="text-gray-600 mb-10 leading-relaxed text-lg">{result.desc}</p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                        <Link href="/training" className="w-full">
+                        <Link href="/courses" className="w-full">
                             <Button variant="primary" className="w-full py-4">View Recommended Modules</Button>
                         </Link>
                         <Link href="/dashboard" className="w-full">

@@ -21,39 +21,6 @@ export default function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Dashboard Top Nav Extension */}
-            <div className="bg-white border-b border-gray-200 px-6 lg:px-12 py-3 flex items-center justify-between sticky top-16 z-40 shadow-sm">
-                <div className="flex gap-6 text-sm font-semibold">
-                    <Link href="/dashboard" className="text-primary border-b-2 border-primary pb-3 -mb-3">Dashboard</Link>
-                    <Link href="/training" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Modules</Link>
-                    <Link href="/tools" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Awareness Tools</Link>
-                    <Link href="/alerts" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Alerts</Link>
-                    <Link href="/campaigns" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Campaigns</Link>
-                    <Link href="/resources" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Library</Link>
-                    <Link href="/contact" className="text-gray-500 hover:text-gray-900 pb-3 -mb-3">Help</Link>
-                </div>
-
-                <div className="flex items-center gap-6">
-                    <div className="relative hidden md:block">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">&#128269;</span>
-                        <input
-                            type="text"
-                            placeholder="Search training, resources..."
-                            className="pl-9 pr-4 py-1.5 bg-gray-100 border-none rounded-full text-sm w-64 focus:ring-1 focus:ring-primary focus:bg-white transition-all outline-none"
-                        />
-                    </div>
-                    <div className="flex items-center gap-3 border-l border-gray-200 pl-6">
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-gray-900 leading-tight">{fullName}</div>
-                            <div className="text-xs text-gray-500">Access Level: {user?.role || 'User'}</div>
-                        </div>
-                        <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-white font-bold shrink-0 shadow-sm overflow-hidden">
-                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=1e1e24&color=fff`} alt="User Avatar" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
                     <div>
@@ -127,11 +94,11 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Recommended Training */}
+                        {/* Recommended Courses */}
                         <div>
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg font-bold text-primary">Recommended Training</h2>
-                                <Link href="/training" className="text-xs font-semibold text-gray-500 hover:text-primary flex items-center gap-1">View catalog &rarr;</Link>
+                                <h2 className="text-lg font-bold text-primary">Recommended Courses</h2>
+                                <Link href="/courses" className="text-xs font-semibold text-gray-500 hover:text-primary flex items-center gap-1">View catalog &rarr;</Link>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

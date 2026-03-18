@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 interface HeaderProps {
     rightAction?: React.ReactNode;
@@ -46,6 +47,24 @@ const adminGroups = [
     }
 ];
 
+const NavLink = ({ href, children, exact = false }: { href: string, children: React.ReactNode, exact?: boolean }) => {
+    const pathname = usePathname();
+    const isActive = exact ? pathname === href : (pathname === href || pathname?.startsWith(href + '/'));
+
+    return (
+        <Link href={href} className={`relative py-2 hover:text-primary transition-colors ${isActive ? 'text-primary font-bold' : ''}`}>
+            {children}
+            {isActive && (
+                <motion.div
+                    layoutId="navbar-underline"
+                    className="absolute left-0 right-0 -bottom-1 h-0.5 bg-primary rounded-full"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+            )}
+        </Link>
+    );
+};
+
 const NavDropdown: React.FC<{ label: string, links: { label: string, href: string }[], active: boolean }> = ({ label, links, active }) => {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
@@ -57,9 +76,16 @@ const NavDropdown: React.FC<{ label: string, links: { label: string, href: strin
             onMouseLeave={() => setIsOpen(false)}
         >
             <button
-                className={`flex items-center gap-1 hover:text-primary transition-colors py-2 ${active ? 'text-primary font-semibold' : ''}`}
+                className={`flex items-center gap-1 hover:text-primary transition-colors py-2 relative ${active ? 'text-primary font-bold' : ''}`}
             >
                 {label}
+                {active && (
+                    <motion.div
+                        layoutId="navbar-underline"
+                        className="absolute left-0 right-0 -bottom-1 h-0.5 bg-primary rounded-full"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                )}
             </button>
             {isOpen && (
                 <div className="absolute top-full left-0 mt-0 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-[60]">
@@ -103,25 +129,29 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                 {!isAnyAdmin && (
                     <>
-                        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-                        {isAuthenticated && <Link href="/dashboard" className={`hover:text-primary transition-colors ${pathname === '/dashboard' ? 'text-primary font-bold' : ''}`}>Dashboard</Link>}
-                        <Link href="/training" className="hover:text-primary transition-colors">Training</Link>
-                        <Link href="/resources" className="hover:text-primary transition-colors">Resources</Link>
-                        <Link href="/tools" className="hover:text-primary transition-colors">Tools</Link>
-                        <Link href="/alerts" className="hover:text-primary transition-colors">Alerts</Link>
-                        <Link href="/campaigns" className="hover:text-primary transition-colors">Campaigns</Link>
-                        {isAuthenticated && <Link href="/certificates" className="hover:text-primary transition-colors">Certificates</Link>}
-                        {isAuthenticated && <Link href="/notifications" className="hover:text-primary transition-colors">Notifications</Link>}
-                        <Link href="/about" className="hover:text-primary transition-colors">About</Link>
-                        <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
+                        {isAuthenticated && <NavLink href="/dashboard">Dashboard</NavLink>}
+                        <NavLink href="/courses">Courses</NavLink>
+                        <NavLink href="/resources">Resources</NavLink>
+                        <NavLink href="/tools">Tools</NavLink>
+                        <NavLink href="/alerts">Alerts</NavLink>
+                        <NavLink href="/campaigns">Campaigns</NavLink>
+                        {isAuthenticated && <NavLink href="/certificates">Certificates</NavLink>}
+                        {isAuthenticated && <NavLink href="/notifications">Notifications</NavLink>}
                     </>
                 )}
 
                 {/* Admin Categorized Dropdowns */}
                 {isAuthenticated && isAnyAdmin && (
                     <>
-                        <Link href="/admin" className={`hover:text-primary transition-colors ${pathname === '/admin' ? 'text-primary font-bold' : ''}`}>
+                        <Link href="/admin" className={`relative py-2 hover:text-primary transition-colors ${pathname === '/admin' ? 'text-primary font-bold' : ''}`}>
                             {user.role === 'super_admin' ? 'Admin Dashboard' : user.role === 'org_admin' ? 'Org Dashboard' : 'Provider Dashboard'}
+                            {pathname === '/admin' && (
+                                <motion.div
+                                    layoutId="navbar-underline"
+                                    className="absolute left-0 right-0 -bottom-1 h-0.5 bg-primary rounded-full"
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
                         </Link>
                         {adminGroups
                             .filter(group => !group.roles || group.roles.includes(user.role))

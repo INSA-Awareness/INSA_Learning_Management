@@ -67,7 +67,7 @@ export default function CourseDetailPage() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <p className="text-red-600 font-medium">{error || 'Course not found.'}</p>
-                    <Link href="/training" className="mt-4 text-primary hover:underline block">← Back to Training</Link>
+                    <Link href="/courses" className="mt-4 text-primary hover:underline block">← Back to Courses</Link>
                 </div>
             </div>
         );
@@ -81,7 +81,7 @@ export default function CourseDetailPage() {
             {/* Hero */}
             <div className="bg-white border-b border-gray-200">
                 <div className="max-w-5xl mx-auto px-6 lg:px-12 py-10">
-                    <Link href="/training" className="text-sm text-gray-500 hover:text-primary mb-4 inline-flex items-center gap-1 transition-colors">
+                    <Link href="/courses" className="text-sm text-gray-500 hover:text-primary mb-4 inline-flex items-center gap-1 transition-colors">
                         ← Back to Training
                     </Link>
                     <div className="flex items-start justify-between gap-6 mt-3">
@@ -134,7 +134,7 @@ export default function CourseDetailPage() {
                             .map((module, i) => (
                                 <Link
                                     key={module.id}
-                                    href={`/training/${id}/modules/${module.id}`}
+                                    href={`/courses/${id}/modules/${module.id}`}
                                     className="block bg-white rounded-xl border border-gray-200 p-5 flex items-start gap-4 hover:border-primary/40 hover:shadow-md transition-all group"
                                 >
                                     <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">

@@ -156,7 +156,7 @@ export default function TrainingPage() {
                                                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded font-medium uppercase">{course.language}</span>
                                             )}
                                             {isAuthenticated ? (
-                                                <Link href={`/training/${course.id}`} className="text-xs font-semibold text-primary hover:underline ml-auto">
+                                                <Link href={`/courses/${course.id}`} className="text-xs font-semibold text-primary hover:underline ml-auto">
                                                     View Course →
                                                 </Link>
                                             ) : (

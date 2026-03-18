@@ -1,37 +1,86 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
+const SELECT_CLS = "block w-full rounded-xl border border-gray-200 py-3 px-4 text-sm shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none bg-gray-50/50 transition-all duration-200 text-gray-900";
 
-function SelectField({ label, name, value, onChange, options }: {
+function SelectField({ label, name, value, onChange, options, required }: {
     label: string;
     name: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     options: { value: string; label: string }[];
+    required?: boolean;
 }) {
     return (
         <div className="w-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <select name={name} value={value} onChange={onChange} className={SELECT_CLS}>
-                <option value="">Select...</option>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center">
+                {label}
+                {required && <span className="text-primary ml-1">*</span>}
+            </label>
+            <select name={name} value={value} onChange={onChange} className={SELECT_CLS} required={required}>
+                <option value="">Select {label}...</option>
                 {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
         </div>
     );
 }
 
+const Card = ({ children, title, subtitle, icon }: { children: React.ReactNode, title: string, subtitle?: string, icon?: React.ReactNode }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white shadow-xl shadow-gray-100/50 rounded-3xl overflow-hidden border border-gray-100 mb-8"
+    >
+        <div className="px-8 py-6 border-b border-gray-50 bg-gradient-to-r from-gray-50/80 to-white flex items-center justify-between">
+            <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    {icon && <span className="text-primary">{icon}</span>}
+                    {title}
+                </h2>
+                {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+            </div>
+        </div>
+        <div className="p-8">
+            {children}
+        </div>
+    </motion.div>
+);
+
+const SectionHeader = ({ title }: { title: string }) => (
+    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50">{title}</h3>
+);
+
+interface ProfileData {
+    id?: string;
+    phone_number?: string;
+    nationality?: string;
+    region?: string;
+    age_range?: string;
+    gender?: string;
+    education_level?: string;
+    field_of_study?: string;
+    institution_name?: string;
+    employment_status?: string;
+    employer_name?: string;
+    unemployment_description?: string;
+    professional_experience?: string;
+    enrollment_motivation?: string;
+    referral_source?: string;
+    is_information_confirmed?: boolean;
+}
+
 export default function ProfilePage() {
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const router = useRouter();
 
-    const [profileData, setProfileData] = useState<any>({});
+    const [profileData, setProfileData] = useState<ProfileData>({});
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileSuccess, setProfileSuccess] = useState('');
@@ -43,15 +92,7 @@ export default function ProfilePage() {
     const [passwordSuccess, setPasswordSuccess] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
-    useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
-            router.push('/login');
-        } else if (isAuthenticated) {
-            fetchProfile();
-        }
-    }, [isAuthenticated, authLoading, router]);
-
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         setIsLoadingProfile(true);
         const { data, status } = await apiFetch('/api/auth/user/background-profile/');
         if (status === 200 && data) {
@@ -66,12 +107,21 @@ export default function ProfilePage() {
             });
         }
         setIsLoadingProfile(false);
-    };
+    }, []);
 
-    const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push('/login');
+        } else if (isAuthenticated) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            fetchProfile();
+        }
+    }, [isAuthenticated, authLoading, router, fetchProfile]);
+
+    const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-        setProfileData((prev: any) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        setProfileData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -85,6 +135,7 @@ export default function ProfilePage() {
             setProfileError(error || 'Failed to update profile.');
         } else {
             setProfileSuccess('Profile updated successfully.');
+            setTimeout(() => setProfileSuccess(''), 5000);
             await fetchProfile();
         }
         setIsSavingProfile(false);
@@ -101,6 +152,7 @@ export default function ProfilePage() {
             setPasswordError(error || 'Failed to change password. Make sure old password is correct.');
         } else {
             setPasswordSuccess('Password changed successfully.');
+            setTimeout(() => setPasswordSuccess(''), 5000);
             setOldPassword(''); setNewPassword('');
         }
         setIsSavingPassword(false);
@@ -108,8 +160,13 @@ export default function ProfilePage() {
 
     if (authLoading || isLoadingProfile) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="relative">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 bg-white rounded-full shadow-sm"></div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -126,255 +183,238 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto space-y-10">
+        <div className="min-h-screen bg-gray-50/50 pb-20 mt-10">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-                {/* Account Info — shown for ALL users */}
-                <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-100">
-                    <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-                        <h2 className="text-xl font-bold text-gray-900">Account Information</h2>
-                        <p className="text-sm text-gray-500 mt-1">Your account details and role.</p>
-                    </div>
-                    <div className="p-6 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Full Name</label>
-                                <p className="text-gray-900 font-medium">{user?.first_name} {user?.last_name}</p>
+                {/* Modern Hero Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative bg-secondary rounded-3xl p-8 mb-10 overflow-hidden shadow-2xl shadow-secondary/20"
+                >
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 bg-primary/10 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 bg-blue-500/5 rounded-full blur-3xl"></div>
+
+                    <div className="relative flex flex-col md:flex-row items-center gap-8">
+                        <div className="relative group">
+                            <div className="h-32 w-32 rounded-3xl bg-gradient-to-br from-primary to-rose-700 flex items-center justify-center text-white text-4xl font-bold shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                                {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</label>
-                                <p className="text-gray-900 font-medium">{user?.email}</p>
+                            <div className="absolute -bottom-2 -right-2 h-10 w-10 bg-white rounded-2xl shadow-lg flex items-center justify-center text-primary">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Role</label>
-                                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                        </div>
+
+                        <div className="text-center md:text-left">
+                            <h1 className="text-4xl font-black text-white mb-3 tracking-tight">{user?.first_name} {user?.last_name}</h1>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                                <span className="px-5 py-2 bg-primary rounded-2xl text-xs font-bold text-white uppercase tracking-wider shadow-lg shadow-primary/30">
                                     {roleLabel[user?.role || ''] || user?.role}
                                 </span>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Language</label>
-                                <p className="text-gray-900 font-medium capitalize">{user?.preferred_language || 'English'}</p>
+                                <span className="px-5 py-2 bg-white/10 backdrop-blur-xl rounded-2xl text-xs font-bold text-gray-200 uppercase tracking-wider border border-white/10 flex items-center gap-2">
+                                    <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span>
+                                    {user?.email}
+                                </span>
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Background Profile — only for non-admin (learner) users */}
-                {!isAdmin && (
-                    <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-100">
-                        <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-                            <h2 className="text-xl font-bold text-gray-900">Background Profile</h2>
-                            <p className="text-sm text-gray-500 mt-1">Update your professional and demographic information.</p>
-                        </div>
-                        <form className="p-6 space-y-6" onSubmit={handleProfileSubmit}>
-                            {profileError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{profileError}</div>}
-                            {profileSuccess && <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-100">{profileSuccess}</div>}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column - Main Info */}
+                    <div className="lg:col-span-2 space-y-8">
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Input label="Phone Number" name="phone_number" value={profileData.phone_number || ''} onChange={handleProfileChange} required />
-
-                                <SelectField
-                                    label="Nationality" name="nationality" value={profileData.nationality || ''} onChange={handleProfileChange}
-                                    options={[{ value: 'ET', label: 'Ethiopian' }, { value: 'other', label: 'Other' }]}
-                                />
-
-                                <SelectField
-                                    label="Region" name="region" value={profileData.region || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'addis_ababa', label: 'Addis Ababa' },
-                                        { value: 'afar', label: 'Afar' },
-                                        { value: 'amhara', label: 'Amhara' },
-                                        { value: 'benishangul_gumuz', label: 'Benishangul-Gumuz' },
-                                        { value: 'dire_dawa', label: 'Dire Dawa' },
-                                        { value: 'gambella', label: 'Gambella' },
-                                        { value: 'harari', label: 'Harari' },
-                                        { value: 'oromia', label: 'Oromia' },
-                                        { value: 'sidama', label: 'Sidama' },
-                                        { value: 'somali', label: 'Somali' },
-                                        { value: 'snnpr', label: 'SNNPR' },
-                                        { value: 'tigray', label: 'Tigray' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Age Range" name="age_range" value={profileData.age_range || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'under_18', label: 'Under 18' },
-                                        { value: '18_24', label: '18–24' },
-                                        { value: '25_34', label: '25–34' },
-                                        { value: '35_44', label: '35–44' },
-                                        { value: '45_54', label: '45–54' },
-                                        { value: '55_plus', label: '55+' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Gender" name="gender" value={profileData.gender || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'male', label: 'Male' },
-                                        { value: 'female', label: 'Female' },
-                                        { value: 'prefer_not_to_say', label: 'Prefer not to say' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Education Level" name="education_level" value={profileData.education_level || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'high_school', label: 'High School' },
-                                        { value: 'bachelor', label: "Bachelor's Degree" },
-                                        { value: 'master', label: "Master's Degree" },
-                                        { value: 'phd', label: 'PhD' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Field of Study" name="field_of_study" value={profileData.field_of_study || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'agriculture', label: 'Agriculture' },
-                                        { value: 'arts', label: 'Arts' },
-                                        { value: 'business', label: 'Business' },
-                                        { value: 'cs_it', label: 'Computer Science & IT' },
-                                        { value: 'education', label: 'Education' },
-                                        { value: 'engineering', label: 'Engineering' },
-                                        { value: 'humanities', label: 'Humanities' },
-                                        { value: 'law', label: 'Law' },
-                                        { value: 'medicine', label: 'Medicine' },
-                                        { value: 'natural_science', label: 'Natural Science' },
-                                        { value: 'social_science', label: 'Social Science' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-
-                                <Input label="Institution Name" name="institution_name" value={profileData.institution_name || ''} onChange={handleProfileChange} />
-
-                                <SelectField
-                                    label="Employment Status" name="employment_status" value={profileData.employment_status || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'full_time', label: 'Full-time Employee' },
-                                        { value: 'part_time', label: 'Part-time Employee' },
-                                        { value: 'freelancer', label: 'Freelancer' },
-                                        { value: 'entrepreneur', label: 'Entrepreneur' },
-                                        { value: 'student', label: 'Student' },
-                                        { value: 'unemployed', label: 'Unemployed' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-
-                                <Input label="Employer Name" name="employer_name" value={profileData.employer_name || ''} onChange={handleProfileChange} />
-
-                                <SelectField
-                                    label="Professional Experience" name="professional_experience" value={profileData.professional_experience || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'none', label: 'No Experience' },
-                                        { value: '1_3', label: '1–3 Years' },
-                                        { value: '3_5', label: '3–5 Years' },
-                                        { value: '5_10', label: '5–10 Years' },
-                                        { value: '10_plus', label: '10+ Years' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Enrollment Motivation" name="enrollment_motivation" value={profileData.enrollment_motivation || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'new_job', label: 'Start a new job' },
-                                        { value: 'promotion', label: 'Get promotion or raise' },
-                                        { value: 'new_skill', label: 'Learn new skill' },
-                                        { value: 'advanced_degree', label: 'Prepare for advanced degree' },
-                                        { value: 'start_business', label: 'Start business' },
-                                        { value: 'interest', label: 'General interest' },
-                                        { value: 'internship', label: 'Internship preparation' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-
-                                <SelectField
-                                    label="Referral Source" name="referral_source" value={profileData.referral_source || ''} onChange={handleProfileChange}
-                                    options={[
-                                        { value: 'social_media', label: 'Social Media' },
-                                        { value: 'friend_family', label: 'Friend or Family' },
-                                        { value: 'employer', label: 'Employer' },
-                                        { value: 'search_engine', label: 'Search Engine' },
-                                        { value: 'government', label: 'Government Communication' },
-                                        { value: 'other', label: 'Other' },
-                                    ]}
-                                />
-                            </div>
-
-                            {profileData.employment_status === 'unemployed' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Unemployment Description</label>
-                                    <textarea
-                                        name="unemployment_description"
-                                        value={profileData.unemployment_description || ''}
-                                        onChange={(e) => setProfileData((prev: any) => ({ ...prev, unemployment_description: e.target.value }))}
-                                        className="block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-y min-h-[80px]"
-                                        placeholder="Briefly describe your situation..."
-                                    />
+                        {/* Account Details Card */}
+                        <Card
+                            title="Personal Information"
+                            subtitle="Manage your primary account settings and preferences"
+                            icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                        >
+                            <SectionHeader title="Basic Details" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 block ml-1">Email Address</label>
+                                    <div className="text-gray-900 font-bold bg-gray-50 px-5 py-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:bg-white hover:shadow-md cursor-default">
+                                        {user?.email}
+                                    </div>
                                 </div>
-                            )}
-
-                            <div className="flex items-center gap-2 pt-2">
-                                <input
-                                    type="checkbox" id="is_info" name="is_information_confirmed"
-                                    checked={profileData.is_information_confirmed || false}
-                                    onChange={handleProfileChange}
-                                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                                />
-                                <label htmlFor="is_info" className="text-sm text-gray-700">I confirm this information is accurate.</label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1 block ml-1">Preferred Language</label>
+                                    <div className="text-gray-900 font-bold bg-gray-50 px-5 py-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:bg-white hover:shadow-md cursor-default capitalize">
+                                        {user?.preferred_language || 'English'}
+                                    </div>
+                                </div>
                             </div>
+                        </Card>
 
-                            <div className="flex justify-end pt-4">
-                                <Button variant="secondary" type="submit" disabled={isSavingProfile}>
-                                    {isSavingProfile ? 'Saving...' : 'Save Profile'}
+                        {/* Background Profile Form */}
+                        {!isAdmin && (
+                            <Card
+                                title="Background Profile"
+                                subtitle="Keep your professional and demographic data up to date"
+                                icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                            >
+                                <form onSubmit={handleProfileSubmit} className="space-y-10">
+                                    <AnimatePresence>
+                                        {profileError && (
+                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-red-50 text-red-700 p-5 rounded-3xl text-sm font-semibold border border-red-100 flex items-center gap-4 shadow-sm">
+                                                <div className="p-2 bg-red-100 rounded-xl text-red-600">
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                </div>
+                                                {profileError}
+                                            </motion.div>
+                                        )}
+                                        {profileSuccess && (
+                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-emerald-50 text-emerald-700 p-5 rounded-3xl text-sm font-semibold border border-emerald-100 flex items-center gap-4 shadow-sm">
+                                                <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                </div>
+                                                {profileSuccess}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="space-y-8">
+                                        <div>
+                                            <SectionHeader title="Contact & Demographic" />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                                <Input label="Phone Number" name="phone_number" value={profileData.phone_number || ''} onChange={handleProfileChange} required placeholder="+251 ..." />
+                                                <SelectField label="Nationality" name="nationality" value={profileData.nationality || ''} onChange={handleProfileChange} options={[{ value: 'ethiopia', label: 'Ethiopian' }, { value: 'other', label: 'Other' }]} />
+                                                <SelectField label="Region" name="region" value={profileData.region || ''} onChange={handleProfileChange} options={[{ value: 'addis_ababa', label: 'Addis Ababa' }, { value: 'afar', label: 'Afar' }, { value: 'amhara', label: 'Amhara' }, { value: 'benishangul_gumuz', label: 'Benishangul-Gumuz' }, { value: 'dire_dawa', label: 'Dire Dawa' }, { value: 'gambella', label: 'Gambella' }, { value: 'harari', label: 'Harari' }, { value: 'oromia', label: 'Oromia' }, { value: 'sidama', label: 'Sidama' }, { value: 'somali', label: 'Somali' }, { value: 'snnpr', label: 'SNNPR' }, { value: 'tigray', label: 'Tigray' }, { value: 'other', label: 'Other' }]} />
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <SelectField label="Age Range" name="age_range" value={profileData.age_range || ''} onChange={handleProfileChange} options={[{ value: '13_17', label: '13–17' }, { value: '18_22', label: '18–22' }, { value: '23_25', label: '23–25' }, { value: '26_30', label: '26–30' }, { value: '31_35', label: '31–35' }, { value: '36_40', label: '36–40' }, { value: '41_plus', label: '41+' }]} />
+                                                    <SelectField label="Gender" name="gender" value={profileData.gender || ''} onChange={handleProfileChange} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'prefer_not_to_say', label: 'Prefer not to say' }]} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <SectionHeader title="Education & Professional" />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                                <SelectField label="Education Level" name="education_level" value={profileData.education_level || ''} onChange={handleProfileChange} options={[{ value: 'high_school', label: 'High School' }, { value: 'bachelor', label: "Bachelor's" }, { value: 'master', label: "Master's" }, { value: 'phd', label: 'PhD' }, { value: 'other', label: 'Other' }]} />
+                                                <SelectField label="Field of Study" name="field_of_study" value={profileData.field_of_study || ''} onChange={handleProfileChange} options={[{ value: 'agriculture', label: 'Agriculture' }, { value: 'arts', label: 'Arts' }, { value: 'business', label: 'Business' }, { value: 'cs_it', label: 'CS & IT' }, { value: 'education', label: 'Education' }, { value: 'engineering', label: 'Engineering' }, { value: 'humanities', label: 'Humanities' }, { value: 'law', label: 'Law' }, { value: 'medicine', label: 'Medicine' }, { value: 'natural_science', label: 'Natural Science' }, { value: 'social_science', label: 'Social Science' }, { value: 'other', label: 'Other' }]} />
+                                                <Input label="Institution Name" name="institution_name" value={profileData.institution_name || ''} onChange={handleProfileChange} />
+                                                <SelectField label="Employment Status" name="employment_status" value={profileData.employment_status || ''} onChange={handleProfileChange} options={[{ value: 'full_time', label: 'Full-time' }, { value: 'part_time', label: 'Part-time' }, { value: 'freelancer', label: 'Freelancer' }, { value: 'entrepreneur', label: 'Entrepreneur' }, { value: 'student', label: 'Student' }, { value: 'unemployed', label: 'Unemployed' }, { value: 'other', label: 'Other' }]} />
+                                                <Input label="Employer Name" name="employer_name" value={profileData.employer_name || ''} onChange={handleProfileChange} />
+                                                <SelectField label="Experience" name="professional_experience" value={profileData.professional_experience || ''} onChange={handleProfileChange} options={[{ value: 'none', label: 'None' }, { value: 'lt_1', label: '< 1 Year' }, { value: '1_2', label: '1–2 Years' }, { value: '2_3', label: '2–3 Years' }, { value: '3_5', label: '3–5 Years' }, { value: '5_6', label: '5–6 Years' }, { value: '6_10', label: '6–10 Years' }, { value: '10_plus', label: '10+ Years' }]} />
+                                                <SelectField label="Motivation" name="enrollment_motivation" value={profileData.enrollment_motivation || ''} onChange={handleProfileChange} options={[{ value: 'new_job', label: 'New Job' }, { value: 'promotion', label: 'Promotion' }, { value: 'new_skill', label: 'New Skill' }, { value: 'advanced_degree', label: 'Advanced Degree' }, { value: 'start_business', label: 'Business' }, { value: 'interest', label: 'Interest' }, { value: 'internship', label: 'Internship' }, { value: 'other', label: 'Other' }]} />
+                                                <SelectField label="Referral Source" name="referral_source" value={profileData.referral_source || ''} onChange={handleProfileChange} options={[{ value: 'email', label: 'Email' }, { value: 'linkedin', label: 'LinkedIn' }, { value: 'facebook', label: 'Facebook' }, { value: 'instagram', label: 'Instagram' }, { value: 'twitter', label: 'Twitter' }, { value: 'telegram', label: 'Telegram' }, { value: 'search_engine', label: 'Search Engine' }, { value: 'sms', label: 'SMS' }, { value: 'website_search', label: 'Website Search' }, { value: 'program_website', label: 'Program Website' }, { value: 'friend_referral', label: 'Friend/Family' }, { value: 'other', label: 'Other' }]} />
+                                            </div>
+                                        </div>
+
+                                        {profileData.employment_status === 'unemployed' && (
+                                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-2">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Unemployment Description</label>
+                                                <textarea name="unemployment_description" value={profileData.unemployment_description || ''} onChange={(e) => setProfileData((prev) => ({ ...prev, unemployment_description: e.target.value }))} className="block w-full rounded-2xl border border-gray-200 py-4 px-5 text-sm shadow-sm focus:ring-4 focus:ring-primary/5 focus:border-primary focus:outline-none bg-gray-50/30 transition-all resize-none min-h-[120px]" placeholder="Could you briefly tell us more about your current status? This helps us provide relevant certifications." />
+                                            </motion.div>
+                                        )}
+
+                                        <div className="flex items-start gap-4 p-6 bg-gradient-to-br from-gray-50 to-white rounded-3xl border border-gray-100 shadow-sm">
+                                            <div className="flex h-6 items-center">
+                                                <input type="checkbox" id="is_info" name="is_information_confirmed" checked={profileData.is_information_confirmed || false} onChange={handleProfileChange} className="w-5 h-5 text-primary border-gray-300 rounded-lg focus:ring-primary cursor-pointer transition-all hover:scale-110" />
+                                            </div>
+                                            <div className="text-sm leading-6">
+                                                <label htmlFor="is_info" className="font-bold text-gray-900 cursor-pointer">Confirmation of Accuracy</label>
+                                                <p className="text-gray-500 font-medium">I understand that providing accurate information ensures I receive the correct certifications and course recommendations.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-6 border-t border-gray-50">
+                                        <Button variant="secondary" type="submit" disabled={isSavingProfile} className="px-10 py-4 rounded-2xl shadow-xl shadow-secondary/20 font-bold tracking-tight hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                            {isSavingProfile ? 'Processing...' : 'Sync Profile Changes'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        )}
+                    </div>
+
+                    {/* Right Column - Stats & Security */}
+                    <div className="space-y-8">
+
+                        {/* Points & Achievements */}
+                        {!isAdmin && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-secondary rounded-[2.5rem] p-9 text-white shadow-2xl shadow-secondary/30 relative overflow-hidden group"
+                            >
+                                <div className="absolute top-0 right-0 h-40 w-40 bg-primary/20 rounded-full -mr-20 -mt-20 blur-3xl transition-all group-hover:bg-primary/30"></div>
+                                <div className="absolute bottom-0 left-0 h-40 w-40 bg-blue-500/10 rounded-full -ml-20 -mb-20 blur-3xl"></div>
+
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50">Leaderboard Stats</h3>
+                                        <div className="h-2 w-2 bg-primary rounded-full animate-ping"></div>
+                                    </div>
+
+                                    <div className="flex items-baseline gap-3 mb-10">
+                                        <span className="text-6xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70">1,250</span>
+                                        <span className="text-sm font-black text-primary tracking-widest uppercase">Points</span>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 flex items-center gap-4 transition-all hover:bg-white/10 hover:border-white/20">
+                                            <div className="h-10 w-10 bg-amber-400/20 rounded-2xl flex items-center justify-center text-xl shadow-inner shadow-amber-400/20">🏅</div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-white tracking-tight">Phishing Hunter</span>
+                                                <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Gold Tier</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 flex items-center gap-4 transition-all hover:bg-white/10 hover:border-white/20">
+                                            <div className="h-10 w-10 bg-blue-400/20 rounded-2xl flex items-center justify-center text-xl shadow-inner shadow-blue-400/20">🛡️</div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-white tracking-tight">Password Shield</span>
+                                                <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Top 1% Learner</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 bg-black/20 backdrop-blur-2xl rounded-3xl border border-white/5 opacity-40 flex items-center gap-4 grayscale">
+                                            <div className="h-10 w-10 bg-white/5 rounded-2xl flex items-center justify-center text-xl">🔒</div>
+                                            <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">Secret Achievement</span>
+                                        </div>
+                                    </div>
+
+                                    <button className="w-full mt-8 py-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all group-hover:border-white/10 active:scale-95">
+                                        View Full Progress
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Security Card */}
+                        <Card
+                            title="Security settings"
+                            subtitle="Manage your password and authentication"
+                            icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>}
+                        >
+                            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                                <AnimatePresence>
+                                    {passwordError && (
+                                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs font-bold border border-red-100 mb-4">
+                                            {passwordError}
+                                        </motion.div>
+                                    )}
+                                    {passwordSuccess && (
+                                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-emerald-50 text-emerald-700 p-4 rounded-2xl text-xs font-bold border border-emerald-100 mb-4">
+                                            {passwordSuccess}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                                <div className="space-y-5">
+                                    <Input label="Current Password" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required placeholder="••••••••" />
+                                    <Input label="New Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required placeholder="••••••••" />
+                                </div>
+                                <Button variant="primary" type="submit" disabled={isSavingPassword} className="w-full py-4 rounded-2xl mt-4 shadow-xl shadow-primary/20 font-bold hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                    {isSavingPassword ? 'Securing...' : 'Update Password'}
                                 </Button>
-                            </div>
-                        </form>
-                    </div>
-                )}
+                            </form>
+                        </Card>
 
-                {/* Gamification Stats — only for learners */}
-                {!isAdmin && (
-                    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex gap-8 items-center">
-                        <div className="text-center">
-                            <span className="block text-2xl font-bold text-primary">1,250</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Awareness Points</span>
-                        </div>
-                        <div className="h-10 w-px bg-gray-100"></div>
-                        <div className="flex-1 flex gap-3 overflow-x-auto pb-2">
-                            <div className="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold whitespace-nowrap border border-yellow-100 flex items-center gap-2">
-                                🏅 Phishing Hunter
-                            </div>
-                            <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold whitespace-nowrap border border-blue-100 flex items-center gap-2">
-                                🛡️ Password Shield
-                            </div>
-                            <div className="px-3 py-1.5 bg-gray-50 text-gray-400 rounded-lg text-xs font-bold whitespace-nowrap border border-gray-100 flex items-center gap-2 italic">
-                                🔒 Locked: Secure Citizen
-                            </div>
-                        </div>
                     </div>
-                )}
-
-                {/* Change Password — shown for ALL users */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-                        <h2 className="text-xl font-bold text-gray-900">Change Password</h2>
-                        <p className="text-sm text-gray-500 mt-1">Ensure your account is using a long, random password to stay secure.</p>
-                    </div>
-                    <form className="p-6 space-y-6" onSubmit={handlePasswordSubmit}>
-                        {passwordError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{passwordError}</div>}
-                        {passwordSuccess && <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-100">{passwordSuccess}</div>}
-                        <div className="max-w-md space-y-5">
-                            <Input label="Current Password" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
-                            <Input label="New Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-                        </div>
-                        <div className="flex pt-2">
-                            <Button variant="secondary" type="submit" disabled={isSavingPassword}>
-                                {isSavingPassword ? 'Updating...' : 'Update Password'}
-                            </Button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>

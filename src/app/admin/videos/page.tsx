@@ -3,16 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getVideos, createVideo, updateVideo, deleteVideo, Video } from '@/lib/api';
+import { getVideos, createVideo, updateVideo, deleteVideo, Video, apiFetch } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { CloudinaryUpload } from '@/components/CloudinaryUpload';
+
+interface ModuleOption { id: string; title: string; }
 
 export default function AdminVideosPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [videos, setVideos] = useState<Video[]>([]);
+    const [modules, setModules] = useState<ModuleOption[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,9 +31,18 @@ export default function AdminVideosPage() {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
             else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
-            else fetchVideos();
+            else {
+                fetchVideos();
+                fetchModules();
+            }
         }
     }, [isAuthenticated, isLoading, user, router]);
+
+    const fetchModules = async () => {
+        const { data } = await apiFetch('/api/v1/modules/?page_size=100');
+        if (data?.results) setModules(data.results);
+        else if (Array.isArray(data)) setModules(data);
+    };
 
     const fetchVideos = async () => {
         setIsFetching(true); setError('');
@@ -135,8 +148,28 @@ export default function AdminVideosPage() {
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedVideo ? 'Edit Video' : 'Add Video'}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
-                    <Input label="Module UUID" value={form.module} onChange={e => setForm({ ...form, module: e.target.value })} required disabled={isActionLoading} />
-                    <Input label="Video URL" value={form.video_url} onChange={e => setForm({ ...form, video_url: e.target.value })} required disabled={isActionLoading} placeholder="e.g. https://example.com/video.mp4" />
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Module <span className="text-red-500">*</span></label>
+                        <select
+                            className="block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white font-medium"
+                            value={form.module}
+                            onChange={e => setForm({ ...form, module: e.target.value })}
+                            required
+                            disabled={isActionLoading}
+                        >
+                            <option value="">Select Module</option>
+                            {modules.map(m => (
+                                <option key={m.id} value={m.id}>{m.title}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <CloudinaryUpload
+                        label="Video File"
+                        resourceType="video"
+                        value={form.video_url}
+                        onUploadSuccess={(url) => setForm({ ...form, video_url: url })}
+                        className="mb-4"
+                    />
                     <div className="grid grid-cols-2 gap-4">
                         <Input label="Duration (seconds)" type="number" value={form.duration.toString()} onChange={e => setForm({ ...form, duration: parseInt(e.target.value) || 0 })} required disabled={isActionLoading} />
                         <Input label="Display Order" type="number" value={form.order.toString()} onChange={e => setForm({ ...form, order: parseInt(e.target.value) || 0 })} required disabled={isActionLoading} />

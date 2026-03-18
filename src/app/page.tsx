@@ -25,7 +25,7 @@ export default function Home() {
         </p>
 
         <div className="mt-10 flex items-center justify-center gap-x-4">
-          <Link href="/training"><Button variant="primary" size="lg">Explore Training &rarr;</Button></Link>
+          <Link href="/courses"><Button variant="primary" size="lg">Explore Courses &rarr;</Button></Link>
           <Link href="/login"><Button variant="outline" size="lg" className="border-gray-300 text-gray-700">Sign In</Button></Link>
         </div>
 
@@ -60,7 +60,7 @@ export default function Home() {
               <p className="mt-3 text-gray-600 text-sm leading-relaxed mb-6">
                 Equipping all citizens and organizations with essential cybersecurity skills through interactive modules.
               </p>
-              <Link href="/training" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1">
+              <Link href="/courses" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1">
                 Explore Modules &rarr;
               </Link>
             </div>

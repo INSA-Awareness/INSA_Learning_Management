@@ -22,6 +22,17 @@ interface Course {
 }
 
 interface OrgOption { id: string; name: string; }
+interface UserData { id: string; email: string; first_name: string; last_name: string; role: string; }
+interface CoursePayload {
+    title: string;
+    description: string;
+    level: string;
+    language: string;
+    status: string;
+    is_active: boolean;
+    course_provider?: string;
+    organization?: string;
+}
 
 const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
@@ -30,6 +41,7 @@ export default function AdminCoursesPage() {
     const router = useRouter();
     const [courses, setCourses] = useState<Course[]>([]);
     const [orgs, setOrgs] = useState<OrgOption[]>([]);
+    const [providers, setProviders] = useState<UserData[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,6 +52,7 @@ export default function AdminCoursesPage() {
         title: '',
         description: '',
         organization: '',
+        course_provider: '',
         language: 'en',
         level: 'beginner',
         status: 'draft',
@@ -48,6 +61,31 @@ export default function AdminCoursesPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+    const fetchCourses = React.useCallback(async () => {
+        setIsFetching(true); setError('');
+        const { data, error: e } = await apiFetch('/api/v1/courses/');
+        if (e) setError(e);
+        else if (data?.results) setCourses(data.results);
+        else if (Array.isArray(data)) setCourses(data);
+        setIsFetching(false);
+    }, []);
+
+    const fetchOrgs = React.useCallback(async () => {
+        const { data } = await apiFetch('/api/v1/organizations/');
+        if (data?.results) setOrgs(data.results);
+        else if (Array.isArray(data)) setOrgs(data);
+    }, []);
+
+    const fetchUsers = React.useCallback(async () => {
+        const { data } = await apiFetch('/api/auth/users/');
+        let allUsers: UserData[] = [];
+        if (data?.results) allUsers = data.results;
+        else if (Array.isArray(data)) allUsers = data;
+
+        // Filter for course providers
+        setProviders(allUsers.filter(u => u.role === 'course_provider'));
+    }, []);
+
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
@@ -55,24 +93,10 @@ export default function AdminCoursesPage() {
             else {
                 fetchCourses();
                 fetchOrgs();
+                fetchUsers();
             }
         }
-    }, [isAuthenticated, isLoading, user, router]);
-
-    const fetchCourses = async () => {
-        setIsFetching(true); setError('');
-        const { data, error: e } = await apiFetch('/api/v1/courses/');
-        if (e) setError(e);
-        else if (data?.results) setCourses(data.results);
-        else if (Array.isArray(data)) setCourses(data);
-        setIsFetching(false);
-    };
-
-    const fetchOrgs = async () => {
-        const { data } = await apiFetch('/api/v1/organizations/');
-        if (data?.results) setOrgs(data.results);
-        else if (Array.isArray(data)) setOrgs(data);
-    };
+    }, [isAuthenticated, isLoading, user, router, fetchCourses, fetchOrgs, fetchUsers]);
 
     const openModal = (course?: Course) => {
         setActionError('');
@@ -82,6 +106,7 @@ export default function AdminCoursesPage() {
                 title: course.title,
                 description: course.description,
                 organization: course.organization || '',
+                course_provider: course.course_provider || '',
                 language: course.language || 'en',
                 level: course.level || 'beginner',
                 status: course.status || 'draft',
@@ -94,6 +119,7 @@ export default function AdminCoursesPage() {
                 title: '',
                 description: '',
                 organization: '',
+                course_provider: user?.role === 'course_provider' ? user.id : '',
                 language: 'en',
                 level: 'beginner',
                 status: 'draft',
@@ -109,7 +135,7 @@ export default function AdminCoursesPage() {
         const endpoint = `/api/v1/courses/${isEditing ? `${selectedCourse!.id}/` : ''}`;
 
         // Build the payload to match the API schema
-        const payload: any = {
+        const payload: CoursePayload = {
             title: form.title,
             description: form.description,
             level: form.level,
@@ -118,13 +144,15 @@ export default function AdminCoursesPage() {
             is_active: form.is_active,
         };
 
-        // Set course_provider to the current user's ID
+        // Set course_provider and organization
         if (!isEditing) {
-            payload.course_provider = user?.id;
-        }
-
-        // Include organization if selected
-        if (form.organization) {
+            if (user?.role === 'course_provider') {
+                payload.course_provider = user.id;
+            } else {
+                if (form.course_provider) payload.course_provider = form.course_provider;
+                if (form.organization) payload.organization = form.organization;
+            }
+        } else if (form.organization) {
             payload.organization = form.organization;
         }
 
@@ -200,9 +228,9 @@ export default function AdminCoursesPage() {
                                     <td className="px-6 py-4 uppercase text-xs">{c.language || '—'}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'published' ? 'bg-green-50 text-green-700' :
-                                                c.status === 'pending' ? 'bg-blue-50 text-blue-700' :
-                                                    c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' :
-                                                        'bg-gray-100 text-gray-600'
+                                            c.status === 'pending' ? 'bg-blue-50 text-blue-700' :
+                                                c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' :
+                                                    'bg-gray-100 text-gray-600'
                                             }`}>
                                             {c.status || 'draft'}
                                         </span>
@@ -232,12 +260,24 @@ export default function AdminCoursesPage() {
                         <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px] resize-y" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading} />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Organization</label>
-                        <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} disabled={isActionLoading}>
-                            <option value="">Select Organization (optional)</option>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Organization {user?.role === 'super_admin' && <span className="text-red-500">*</span>}</label>
+                        <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} disabled={isActionLoading} required={user?.role === 'super_admin'}>
+                            <option value="">Select Organization {user?.role === 'super_admin' ? '(Required)' : '(optional)'}</option>
                             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                         </select>
                     </div>
+                    {user?.role === 'super_admin' && (
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Provider <span className="text-red-500">*</span></label>
+                            <select className={SELECT_CLS} value={form.course_provider} onChange={e => setForm({ ...form, course_provider: e.target.value })} disabled={isActionLoading} required>
+                                <option value="">Select Course Provider (User)</option>
+                                {providers.map(p => (
+                                    <option key={p.id} value={p.id}>{p.first_name} {p.last_name} ({p.email})</option>
+                                ))}
+                            </select>
+                            {providers.length === 0 && <p className="text-[10px] text-red-500 mt-1">No users with 'Course Provider' role found. Please create one first.</p>}
+                        </div>
+                    )}
                     <div className="grid grid-cols-3 gap-3">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Language</label>

@@ -20,10 +20,13 @@ interface ArticleData {
     order: number;
 }
 
+interface ModuleOption { id: string; title: string; }
+
 export default function AdminArticlesPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [articles, setArticles] = useState<ArticleData[]>([]);
+    const [modules, setModules] = useState<ModuleOption[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -56,9 +59,16 @@ export default function AdminArticlesPage() {
                 router.push('/dashboard');
             } else {
                 fetchArticles();
+                fetchModules();
             }
         }
     }, [isAuthenticated, isLoading, user, router, page, searchTerm]);
+
+    const fetchModules = async () => {
+        const { data } = await apiFetch('/api/v1/modules/?page_size=100');
+        if (data?.results) setModules(data.results);
+        else if (Array.isArray(data)) setModules(data);
+    };
 
     const fetchArticles = async () => {
         setIsFetching(true);
@@ -267,15 +277,21 @@ export default function AdminArticlesPage() {
                         </div>
                     )}
 
-                    <Input
-                        label="Module UUID"
-                        name="module"
-                        value={formData.module}
-                        onChange={(e) => setFormData({ ...formData, module: e.target.value })}
-                        required
-                        disabled={isActionLoading}
-                        placeholder="123e4567-e89b-12d3..."
-                    />
+                    <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Module <span className="text-red-500">*</span></label>
+                        <select
+                            className="block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white font-medium"
+                            value={formData.module}
+                            onChange={(e) => setFormData({ ...formData, module: e.target.value })}
+                            required
+                            disabled={isActionLoading}
+                        >
+                            <option value="">Select Module</option>
+                            {modules.map(m => (
+                                <option key={m.id} value={m.id}>{m.title}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
