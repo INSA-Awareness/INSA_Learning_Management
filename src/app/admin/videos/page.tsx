@@ -27,6 +27,10 @@ export default function AdminVideosPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+    // Filter states
+    const [selectedModules, setSelectedModules] = useState<string[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
@@ -100,6 +104,14 @@ export default function AdminVideosPage() {
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
     if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
+    const filteredVideos = videos.filter(v => {
+        const matchesModule = selectedModules.length === 0 || selectedModules.includes(v.module);
+        const matchesSearch = !searchTerm || v.video_url.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesModule && matchesSearch;
+    });
+
+    const getModuleName = (id: string) => modules.find(m => m.id === id)?.title || id;
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <div className="bg-white border-b border-gray-200">
@@ -112,36 +124,89 @@ export default function AdminVideosPage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
-                {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-500">
-                        <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-4">Module ID</th>
-                                <th className="px-6 py-4">Video URL</th>
-                                <th className="px-6 py-4">Duration (s)</th>
-                                <th className="px-6 py-4">Order</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {videos.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No videos yet.</td></tr>
-                            ) : videos.map(v => (
-                                <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 font-mono text-xs">{v.module}</td>
-                                    <td className="px-6 py-4 truncate max-w-xs">{v.video_url}</td>
-                                    <td className="px-6 py-4">{v.duration}</td>
-                                    <td className="px-6 py-4">{v.order}</td>
-                                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                                        <button onClick={() => openModal(v)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
-                                        <button onClick={() => handleDelete(v.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
-                                    </td>
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10 flex flex-col lg:flex-row gap-8">
+                {/* Sidebar Filter */}
+                <div className="w-full lg:w-64 shrink-0">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+                        <div className="mb-6">
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Search</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                                <input
+                                    type="text"
+                                    placeholder="Video URL..."
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-8 border-b border-gray-100 pb-2">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Module</h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                {modules.map(module => (
+                                    <label key={module.id} className="flex items-start gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                            checked={selectedModules.includes(module.id)}
+                                            onChange={() => {
+                                                setSelectedModules(prev =>
+                                                    prev.includes(module.id) ? prev.filter(id => id !== module.id) : [...prev, module.id]
+                                                );
+                                            }}
+                                        />
+                                        <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors leading-tight">{module.title}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {(selectedModules.length > 0 || searchTerm) && (
+                            <button
+                                onClick={() => { setSelectedModules([]); setSearchTerm(''); }}
+                                className="text-xs text-primary font-bold hover:text-primary-hover transition-colors flex items-center gap-1"
+                            >
+                                ✕ Clear all filters
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Main Content */}
+                <div className="flex-1">
+                    {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
+
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table className="w-full text-left text-sm text-gray-500">
+                            <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
+                                <tr>
+                                    <th className="px-6 py-4">Video URL</th>
+                                    <th className="px-6 py-4">Module</th>
+                                    <th className="px-6 py-4 text-center">Duration</th>
+                                    <th className="px-6 py-4 text-center">Order</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {filteredVideos.length === 0 ? (
+                                    <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No videos found matching your criteria.</td></tr>
+                                ) : filteredVideos.map(v => (
+                                    <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-gray-900 truncate max-w-[200px]">{v.video_url}</td>
+                                        <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{getModuleName(v.module)}</td>
+                                        <td className="px-6 py-4 text-center">{v.duration} min</td>
+                                        <td className="px-6 py-4 text-center">{v.order}</td>
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                            <button onClick={() => openModal(v)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
+                                            <button onClick={() => handleDelete(v.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 

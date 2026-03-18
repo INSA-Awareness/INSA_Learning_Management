@@ -61,6 +61,11 @@ export default function AdminCoursesPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+    // Filtering states
+    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const fetchCourses = React.useCallback(async () => {
         setIsFetching(true); setError('');
         const { data, error: e } = await apiFetch('/api/v1/courses/');
@@ -192,6 +197,13 @@ export default function AdminCoursesPage() {
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
     if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
 
+    const filteredCourses = courses.filter(c => {
+        const matchesLevel = selectedLevels.length === 0 || (c.level && selectedLevels.includes(c.level.toLowerCase()));
+        const matchesStatus = selectedStatuses.length === 0 || (c.status && selectedStatuses.includes(c.status.toLowerCase()));
+        const matchesSearch = !searchQuery || c.title.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesLevel && matchesStatus && matchesSearch;
+    });
+
     const canPublish = user.role === 'super_admin';
 
     return (
@@ -205,50 +217,123 @@ export default function AdminCoursesPage() {
                     <Button variant="primary" onClick={() => openModal()}>Add Course</Button>
                 </div>
             </div>
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
-                {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-500">
-                        <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-4">Title</th>
-                                <th className="px-6 py-4">Level</th>
-                                <th className="px-6 py-4">Language</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {courses.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No courses yet.</td></tr>
-                            ) : courses.map(c => (
-                                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-gray-900">{c.title}</td>
-                                    <td className="px-6 py-4 capitalize">{c.level || '—'}</td>
-                                    <td className="px-6 py-4 uppercase text-xs">{c.language || '—'}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'published' ? 'bg-green-50 text-green-700' :
-                                            c.status === 'pending' ? 'bg-blue-50 text-blue-700' :
-                                                c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' :
-                                                    'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {c.status || 'draft'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                                        {c.status === 'draft' && user.role === 'course_provider' && (
-                                            <button onClick={() => handleStatusUpdate(c.id, 'pending')} className="text-blue-600 hover:text-blue-800 font-medium mr-3 transition-colors">Submit</button>
-                                        )}
-                                        {c.status === 'pending' && user.role === 'super_admin' && (
-                                            <button onClick={() => handleStatusUpdate(c.id, 'published')} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Approve</button>
-                                        )}
-                                        <button onClick={() => openModal(c)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
-                                        <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
-                                    </td>
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10 flex flex-col lg:flex-row gap-8">
+                {/* Sidebar Filter */}
+                <div className="w-full lg:w-64 shrink-0">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+                        <div className="mb-6">
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Search</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                                <input
+                                    type="text"
+                                    placeholder="Course title..."
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Level</h3>
+                            <div className="space-y-3">
+                                {['beginner', 'intermediate', 'advanced'].map(level => (
+                                    <label key={level} className="flex items-center gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                            checked={selectedLevels.includes(level)}
+                                            onChange={() => {
+                                                setSelectedLevels(prev =>
+                                                    prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
+                                                );
+                                            }}
+                                        />
+                                        <span className="text-sm text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{level}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mb-8">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Status</h3>
+                            <div className="space-y-3">
+                                {['draft', 'pending', 'published', 'archived'].map(status => (
+                                    <label key={status} className="flex items-center gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                            checked={selectedStatuses.includes(status)}
+                                            onChange={() => {
+                                                setSelectedStatuses(prev =>
+                                                    prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+                                                );
+                                            }}
+                                        />
+                                        <span className="text-sm text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{status}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {(selectedLevels.length > 0 || selectedStatuses.length > 0 || searchQuery) && (
+                            <button
+                                onClick={() => { setSelectedLevels([]); setSelectedStatuses([]); setSearchQuery(''); }}
+                                className="text-xs text-primary font-bold hover:text-primary-hover transition-colors flex items-center gap-1"
+                            >
+                                ✕ Clear all filters
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Main Content */}
+                <div className="flex-1">
+                    {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100">{error}</div>}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table className="w-full text-left text-sm text-gray-500">
+                            <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
+                                <tr>
+                                    <th className="px-6 py-4">Title</th>
+                                    <th className="px-6 py-4">Level</th>
+                                    <th className="px-6 py-4">Language</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {filteredCourses.length === 0 ? (
+                                    <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No courses found matching your criteria.</td></tr>
+                                ) : filteredCourses.map(c => (
+                                    <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-gray-900">{c.title}</td>
+                                        <td className="px-6 py-4 capitalize">{c.level || '—'}</td>
+                                        <td className="px-6 py-4 uppercase text-xs">{c.language || '—'}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'published' ? 'bg-green-50 text-green-700' :
+                                                c.status === 'pending' ? 'bg-blue-50 text-blue-700' :
+                                                    c.status === 'draft' ? 'bg-yellow-50 text-yellow-700' :
+                                                        'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                {c.status || 'draft'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                            {c.status === 'draft' && user.role === 'course_provider' && (
+                                                <button onClick={() => handleStatusUpdate(c.id, 'pending')} className="text-blue-600 hover:text-blue-800 font-medium mr-3 transition-colors">Submit</button>
+                                            )}
+                                            {c.status === 'pending' && user.role === 'super_admin' && (
+                                                <button onClick={() => handleStatusUpdate(c.id, 'published')} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Approve</button>
+                                            )}
+                                            <button onClick={() => openModal(c)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
+                                            <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedCourse ? 'Edit Course' : 'Add Course'}>
