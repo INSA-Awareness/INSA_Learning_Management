@@ -129,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                 {!isAnyAdmin && (
                     <>
+                        {!isAuthenticated && <NavLink href="/" exact>Home</NavLink>}
                         {isAuthenticated && <NavLink href="/dashboard">Dashboard</NavLink>}
                         <NavLink href="/courses">Courses</NavLink>
                         <NavLink href="/resources">Resources</NavLink>
