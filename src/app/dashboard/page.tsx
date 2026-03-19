@@ -38,6 +38,8 @@ export default function DashboardPage() {
                 router.push('/login');
             } else {
                 fetchDashboardData();
+                const interval = setInterval(fetchDashboardData, 60000); // Poll every minute
+                return () => clearInterval(interval);
             }
         }
     }, [isAuthenticated, isLoading, router]);
@@ -62,6 +64,14 @@ export default function DashboardPage() {
 
     const fullName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.email || 'User';
 
+    const stats = {
+        totalCourses: enrollments.length,
+        completedCourses: enrollments.filter(e => e.progress === 100).length,
+        avgProgress: enrollments.length > 0
+            ? Math.round(enrollments.reduce((sum, e) => sum + e.progress, 0) / enrollments.length)
+            : 0
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
@@ -72,8 +82,10 @@ export default function DashboardPage() {
                             Your cyber resilience score is stable. There are <span className="font-bold text-orange-500">{alerts.length} new advisories</span> requiring your attention today.
                         </p>
                     </div>
-                    <button className="bg-white border border-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:bg-green-50 transition-colors shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span> System Operational
+                    <button className="bg-white border border-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:bg-green-50 transition-colors shadow-sm relative overflow-hidden group">
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span className="relative z-10">Live Dashboard &bull; {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div className="absolute inset-0 bg-green-50/0 group-hover:bg-green-50/50 transition-colors"></div>
                     </button>
                 </div>
 
@@ -102,6 +114,22 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column (Main Content) */}
                     <div className="lg:col-span-2 space-y-8">
+                        {/* Summary Stats Cards */}
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Enrolled</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.totalCourses}</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Completed</p>
+                                <p className="text-2xl font-bold text-green-600">{stats.completedCourses}</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Avg Progress</p>
+                                <p className="text-2xl font-bold text-primary">{stats.avgProgress}%</p>
+                            </div>
+                        </div>
+
                         {/* Stats Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {enrollments.slice(0, 2).map((enrollment, idx) => (
