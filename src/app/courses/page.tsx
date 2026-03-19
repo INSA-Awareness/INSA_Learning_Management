@@ -50,7 +50,9 @@ export default function TrainingPage() {
     }
 
     const difficultyColors: Record<string, string> = {
-        beginner: 'green', intermediate: 'yellow', advanced: 'red'
+        beginner: 'green',
+        medium: 'yellow',
+        advanced: 'red'
     };
 
     const icons = ['🛡️', '🔒', '🕵️', '💻', '📡', '📜', '🌍', '🔑', '⚙️', '🧠'];
@@ -92,13 +94,13 @@ export default function TrainingPage() {
                     <div>
                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Difficulty</h4>
                         <div className="space-y-3">
-                            {['beginner', 'intermediate', 'advanced'].map(item => (
+                            {['beginner', 'medium', 'advanced'].map(item => (
                                 <label key={item} className="flex items-center gap-3 cursor-pointer group">
                                     <input type="checkbox" className="hidden" checked={selectedDifficulty.includes(item)} onChange={() => handleCheckboxChange(setSelectedDifficulty, item)} />
                                     <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedDifficulty.includes(item) ? 'bg-primary border-primary' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
-                                        {selectedDifficulty.includes(item) && <div className="w-2 h-2 bg-white rounded-sm"></div>}
+                                        {selectedDifficulty.includes(item) && <span className="text-white text-[10px]">&#10003;</span>}
                                     </div>
-                                    <span className="text-sm text-gray-600 capitalize group-hover:text-gray-900">{item}</span>
+                                    <span className="text-sm text-gray-600 group-hover:text-primary transition-colors capitalize">{item}</span>
                                 </label>
                             ))}
                         </div>
@@ -112,7 +114,7 @@ export default function TrainingPage() {
                             All Courses <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{filteredCourses.length} total</span>
                         </h3>
                         <select
-                            className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                            className="border border-gray-200 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >

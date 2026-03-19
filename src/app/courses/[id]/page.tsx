@@ -73,7 +73,7 @@ export default function CourseDetailPage() {
         );
     }
 
-    const difficultyColor: Record<string, string> = { beginner: 'bg-green-50 text-green-700', intermediate: 'bg-yellow-50 text-yellow-700', advanced: 'bg-red-50 text-red-700' };
+    const difficultyColor: Record<string, string> = { beginner: 'bg-green-50 text-green-700', medium: 'bg-yellow-50 text-yellow-700', advanced: 'bg-red-50 text-red-700' };
     const diff = course.difficulty?.toLowerCase() || '';
 
     return (

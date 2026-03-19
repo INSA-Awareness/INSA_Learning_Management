@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { ConfirmModal } from './ConfirmModal';
 
 interface HeaderProps {
     rightAction?: React.ReactNode;
@@ -29,7 +30,6 @@ const adminGroups = [
         links: [
             { label: 'Users', href: '/admin/users' },
             { label: 'Organizations', href: '/admin/organizations', roles: ['super_admin'] },
-            { label: 'Memberships', href: '/admin/memberships' },
             { label: 'Training Requests', href: '/admin/training-requests' },
             { label: 'Payment Approvals', href: '/admin/payment-approvals', roles: ['super_admin'] },
         ]
@@ -107,11 +107,21 @@ const NavDropdown: React.FC<{ label: string, links: { label: string, href: strin
 export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
     const { user, isAuthenticated, logout } = useAuth();
     const pathname = usePathname();
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
 
     const isSystemAdmin = user?.role === 'super_admin';
     const isOrgAdmin = user?.role === 'org_admin';
     const isCourseProvider = user?.role === 'course_provider';
     const isAnyAdmin = isSystemAdmin || isOrgAdmin || isCourseProvider;
+
+    const handleLogout = () => {
+        setIsLogoutModalOpen(true);
+    };
+
+    const confirmLogout = () => {
+        logout();
+        setIsLogoutModalOpen(false);
+    };
 
     return (
         <header className="w-full h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50">
@@ -179,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
                     isAuthenticated ? (
                         <div className="flex items-center gap-4">
                             <Link href="/profile" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors">Profile</Link>
-                            <button onClick={logout} className="text-sm font-medium text-primary hover:transition-colors border border-primary px-4 py-1.5 rounded-full cursor-pointer">
+                            <button onClick={handleLogout} className="text-sm font-medium text-primary hover:transition-colors border border-primary px-4 py-1.5 rounded-full cursor-pointer">
                                 Logout
                             </button>
                         </div>
@@ -190,6 +200,15 @@ export const Header: React.FC<HeaderProps> = ({ rightAction }) => {
                     )
                 )}
             </div>
+            <ConfirmModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onConfirm={confirmLogout}
+                title="Log Out"
+                message="Are you sure you want to log out of your account?"
+                confirmText="Log Out"
+                variant="danger"
+            />
         </header>
     );
 };

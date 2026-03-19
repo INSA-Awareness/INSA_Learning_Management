@@ -118,11 +118,18 @@ export async function apiFetch<T = any>(
 ): Promise<{ data?: T; error?: string; status: number }> {
     try {
         const tokens = getTokens();
+        const method = options.method || 'GET';
         const headers = new Headers(options.headers || {});
 
         // Auto-add JSON content type if not provided and it has a body
         if (options.body && !headers.has('Content-Type')) {
             headers.set('Content-Type', 'application/json');
+        }
+
+        // Defensive: If method is GET but there is a body, it's likely an error (unless it's a very specific case)
+        // This helps catch cases where apiFetch('/url', { body: ... }) is called without method: 'POST'
+        if (method === 'GET' && options.body) {
+            console.warn(`apiFetch called with GET method but has a body for endpoint: ${endpoint}. Defaulting to POST.`);
         }
 
         if (tokens?.access) {
@@ -131,6 +138,7 @@ export async function apiFetch<T = any>(
 
         const config: RequestInit = {
             ...options,
+            method: options.body && method === 'GET' ? 'POST' : method,
             headers,
         };
 

@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const SELECT_CLS = "block w-full rounded-xl border border-gray-200 py-3 px-4 text-sm shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none bg-gray-50/50 transition-all duration-200 text-gray-900";
+const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
 function SelectField({ label, name, value, onChange, options, required }: {
     label: string;

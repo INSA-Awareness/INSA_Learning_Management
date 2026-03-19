@@ -34,7 +34,7 @@ interface CoursePayload {
     organization?: string;
 }
 
-const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
+const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
 
 export default function AdminCoursesPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
@@ -238,7 +238,7 @@ export default function AdminCoursesPage() {
                         <div className="mb-8">
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Level</h3>
                             <div className="space-y-3">
-                                {['beginner', 'intermediate', 'advanced'].map(level => (
+                                {['beginner', 'medium', 'advanced'].map(level => (
                                     <label key={level} className="flex items-center gap-3 cursor-pointer group">
                                         <input
                                             type="checkbox"
@@ -250,7 +250,7 @@ export default function AdminCoursesPage() {
                                                 );
                                             }}
                                         />
-                                        <span className="text-sm text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{level}</span>
+                                        <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors capitalize">{level === 'medium' ? 'Medium' : level}</span>
                                     </label>
                                 ))}
                             </div>
@@ -378,7 +378,7 @@ export default function AdminCoursesPage() {
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Level</label>
                             <select className={SELECT_CLS} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} disabled={isActionLoading}>
                                 <option value="beginner">Beginner</option>
-                                <option value="intermediate">Intermediate</option>
+                                <option value="medium">Medium</option>
                                 <option value="advanced">Advanced</option>
                             </select>
                         </div>

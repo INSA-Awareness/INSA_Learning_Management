@@ -71,7 +71,7 @@ export default function LoginPage() {
                     Secure Access To The National Cyber Resilience Portal
                 </p>
 
-                <form className="space-y-5 text-left" onSubmit={handleSubmit}>
+                <form className="space-y-5 text-left" onSubmit={handleSubmit} method="POST">
                     {error && (
                         <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
                             {error}
@@ -90,11 +90,16 @@ export default function LoginPage() {
                     <Input
                         label="Password"
                         type="password"
-                        placeholder="At least 8 characters"
+                        placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        disabled={isLoading}
+                        showPasswordToggle
+                        icon={
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        }
                     />
 
                     <div className="flex justify-end">
@@ -107,27 +112,28 @@ export default function LoginPage() {
                         {isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
 
-                    <div className="mt-6 mb-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200"></div>
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="bg-white px-4 text-gray-500">Or</span>
-                            </div>
+                </form>
+
+                <div className="mt-8 mb-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="bg-white px-4 text-gray-500">Or reach out with</span>
                         </div>
                     </div>
+                </div>
 
-                    <div className="flex justify-center">
-                        <GoogleLogin
-                            onSuccess={handleGoogleSuccess}
-                            onError={() => {
-                                setError('Google Sign-In Failed');
-                            }}
-                            useOneTap
-                        />
-                    </div>
-                </form>
+                <div className="flex justify-center">
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={() => {
+                            setError('Google Sign-In Failed');
+                        }}
+                        useOneTap
+                    />
+                </div>
 
                 <p className="mt-8 text-sm text-gray-600">
                     Don&apos;t you have an account?{' '}

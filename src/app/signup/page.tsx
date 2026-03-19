@@ -149,7 +149,7 @@ export default function SignupPage() {
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
                     <p className="text-gray-500 text-sm mb-8">Enter your credentials to access the secure portal.</p>
 
-                    <form className="space-y-5" onSubmit={handleSubmit}>
+                    <form className="space-y-5" onSubmit={handleSubmit} method="POST">
                         {error && (
                             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
                                 {error}
@@ -191,12 +191,13 @@ export default function SignupPage() {
                             <div className="space-y-1">
                                 <Input
                                     label="Password"
+                                    name="password"
                                     type="password"
-                                    placeholder="••••••••"
+                                    placeholder="Create a strong password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    disabled={isLoading}
+                                    showPasswordToggle
                                     icon={<span className="text-gray-400">&#128274;</span>}
                                 />
                                 {password && (
@@ -215,6 +216,7 @@ export default function SignupPage() {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
+                                showPasswordToggle
                                 disabled={isLoading}
                                 icon={<span className="text-gray-400">&#128274;</span>}
                             />
@@ -262,41 +264,42 @@ export default function SignupPage() {
                             {isLoading ? 'Creating Account...' : 'Create Account'}
                         </Button>
 
-                        <div className="mt-8">
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200"></div>
-                                </div>
-                                <div className="relative flex justify-center text-xs">
-                                    <span className="bg-white px-2 text-gray-400 font-semibold uppercase tracking-wider">Or verify identity with</span>
-                                </div>
-                            </div>
+                    </form>
 
-                            <div className="mt-6 grid grid-cols-2 gap-4">
-                                <div className="flex justify-center flex-col items-center">
-                                    <GoogleLogin
-                                        onSuccess={handleGoogleSuccess}
-                                        onError={() => {
-                                            setError('Google Sign-In Failed');
-                                        }}
-                                        useOneTap
-                                    />
-                                </div>
-                                <Button variant="social" className="w-full flex justify-center py-2.5 px-4 text-primary">
-                                    <span className="flex items-center gap-2 text-sm font-semibold">
-                                        <span className="inline-block w-4 h-4 border border-primary rounded-sm text-center leading-none">🏛</span> GovID
-                                    </span>
-                                </Button>
+                    <div className="mt-8">
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-200"></div>
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                                <span className="bg-white px-2 text-gray-400 font-semibold uppercase tracking-wider">Or verify identity with</span>
                             </div>
                         </div>
 
-                        <p className="mt-8 text-center text-sm text-gray-600">
-                            Already have a CyberSafe ID?{' '}
-                            <Link href="/login" className="font-semibold text-primary hover:underline">
-                                Sign in securely
-                            </Link>
-                        </p>
-                    </form>
+                        <div className="mt-6 grid grid-cols-2 gap-4">
+                            <div className="flex justify-center flex-col items-center">
+                                <GoogleLogin
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={() => {
+                                        setError('Google Sign-In Failed');
+                                    }}
+                                    useOneTap
+                                />
+                            </div>
+                            <Button variant="social" className="w-full flex justify-center py-2.5 px-4 text-primary text-[10px] md:text-sm">
+                                <span className="flex items-center gap-2 font-semibold">
+                                    <span className="inline-block w-4 h-4 border border-primary rounded-sm text-center leading-none">🏛</span> GovID
+                                </span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <p className="mt-8 text-center text-sm text-gray-600">
+                        Already have a CyberSafe ID?{' '}
+                        <Link href="/login" className="font-semibold text-primary hover:underline">
+                            Sign in securely
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

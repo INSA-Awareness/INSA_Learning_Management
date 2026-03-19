@@ -194,7 +194,11 @@ export default function AdminVideosPage() {
                                     <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No videos found matching your criteria.</td></tr>
                                 ) : filteredVideos.map(v => (
                                     <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-gray-900 truncate max-w-[200px]">{v.video_url}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900 truncate max-w-[200px]">
+                                            <a href={v.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                                {v.video_url}
+                                            </a>
+                                        </td>
                                         <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{getModuleName(v.module)}</td>
                                         <td className="px-6 py-4 text-center">{v.duration} min</td>
                                         <td className="px-6 py-4 text-center">{v.order}</td>

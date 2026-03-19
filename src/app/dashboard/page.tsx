@@ -1,19 +1,62 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+
+interface Enrollment {
+    id: string;
+    course: {
+        id: string;
+        title: string;
+        difficulty: string;
+    };
+    progress: number;
+    last_accessed: string;
+}
+
+interface Alert {
+    id: string;
+    title: string;
+    message: string;
+    severity: string;
+    published_at: string;
+}
 
 export default function DashboardPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
+    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [isFetching, setIsFetching] = useState(true);
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
-            router.push('/login');
+        if (!isLoading) {
+            if (!isAuthenticated) {
+                router.push('/login');
+            } else {
+                fetchDashboardData();
+            }
         }
     }, [isAuthenticated, isLoading, router]);
+
+    const fetchDashboardData = async () => {
+        setIsFetching(true);
+        const [enrollRes, alertsRes] = await Promise.all([
+            apiFetch('/api/v1/enrollments/'),
+            apiFetch('/api/v1/alerts/?page_size=5')
+        ]);
+
+        if (enrollRes.data?.results) setEnrollments(enrollRes.data.results);
+        else if (Array.isArray(enrollRes.data)) setEnrollments(enrollRes.data);
+
+        if (alertsRes.data?.results) setAlerts(alertsRes.data.results);
+        else if (Array.isArray(alertsRes.data)) setAlerts(alertsRes.data);
+
+        setIsFetching(false);
+    };
 
     if (isLoading || !isAuthenticated) return null;
 
@@ -26,7 +69,7 @@ export default function DashboardPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-primary mb-1">Welcome back, {user?.first_name || 'User'}.</h1>
                         <p className="text-gray-600">
-                            Your cyber resilience score is stable. There are <span className="font-bold text-orange-500">2 new advisories</span> requiring your attention today.
+                            Your cyber resilience score is stable. There are <span className="font-bold text-orange-500">{alerts.length} new advisories</span> requiring your attention today.
                         </p>
                     </div>
                     <button className="bg-white border border-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:bg-green-50 transition-colors shadow-sm">
@@ -42,11 +85,11 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                         <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-bold text-gray-900">National Threat Advisory</h3>
+                            <h3 className="font-bold text-gray-900">{alerts[0]?.title || 'National Threat Advisory'}</h3>
                             <span className="bg-orange-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded">Action Required</span>
                         </div>
                         <p className="text-sm text-gray-700 max-w-4xl">
-                            Phishing campaigns targeting public sector employees increased by 42%. Verify all &quot;Tax Refund&quot; communications immediately through the official portal.
+                            {alerts[0]?.message || 'Phishing campaigns targeting public sector employees increased by 42%. Verify all communications immediately through the official portal.'}
                         </p>
                     </div>
                     <Link href="/alerts">
@@ -61,37 +104,32 @@ export default function DashboardPage() {
                     <div className="lg:col-span-2 space-y-8">
                         {/* Stats Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group flex gap-4 cursor-pointer relative overflow-hidden">
-                                <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-red-50 transition-all">
-                                    &#128274;
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-gray-900 group-hover:text-primary transition-colors">Advanced Password Security</h4>
-                                    <p className="text-xs text-gray-500 mb-2">Module 3 of 5 • Estimated 15 mins left</p>
-                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                                        <div className="bg-primary h-1.5 rounded-full w-[60%] group-hover:bg-red-600 transition-colors"></div>
+                            {enrollments.slice(0, 2).map((enrollment, idx) => (
+                                <Link key={enrollment.id} href={`/courses/${enrollment.course.id}`} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group flex gap-4 cursor-pointer relative overflow-hidden">
+                                    <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-red-50 transition-all">
+                                        {idx === 0 ? '🔒' : '📱'}
                                     </div>
-                                    <div className="flex justify-between text-[10px] font-bold text-gray-400 mt-2">
-                                        <span>60% COMPLETED</span>
-                                        <span className="text-primary group-hover:underline cursor-pointer">RESUME &rarr;</span>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-gray-900 group-hover:text-primary transition-colors">{enrollment.course.title}</h4>
+                                        <p className="text-xs text-gray-500 mb-2">Progress • {enrollment.progress}% completed</p>
+                                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1 overflow-hidden">
+                                            <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${enrollment.progress}%` }}></div>
+                                        </div>
+                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mt-2">
+                                            <span>{enrollment.progress}% COMPLETED</span>
+                                            <span className="text-primary group-hover:underline cursor-pointer">RESUME &rarr;</span>
+                                        </div>
                                     </div>
+                                </Link>
+                            ))}
+                            {enrollments.length === 0 && !isFetching && (
+                                <div className="md:col-span-2 bg-white rounded-2xl p-8 border border-dashed border-gray-200 text-center">
+                                    <p className="text-gray-500 mb-4">You are not enrolled in any courses yet.</p>
+                                    <Link href="/courses">
+                                        <button className="text-primary font-bold hover:underline">Explore Courses &rarr;</button>
+                                    </Link>
                                 </div>
-                            </div>
-
-                            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group flex gap-4 cursor-pointer relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-100 to-transparent opacity-50 pointer-events-none group-hover:opacity-100 transition-opacity"></div>
-                                <div className="w-16 h-16 shrink-0 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-orange-100 transition-all">
-                                    &#128241;
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors">Mobile Device Management</h4>
-                                    <p className="text-xs text-gray-500 mb-4">Recommended based on your role</p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">20 mins</span>
-                                        <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest group-hover:underline cursor-pointer ml-auto">START &rarr;</span>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Recommended Courses */}
@@ -212,35 +250,22 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="border-b border-gray-100 pb-4">
-                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                                            <span className="text-primary">Active Campaign</span>
-                                            <span>2 hrs ago</span>
+                                    {alerts.slice(0, 3).map((alert, i) => (
+                                        <div key={alert.id} className={i !== 2 ? "border-b border-gray-100 pb-4" : ""}>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                                                <span className={alert.severity.toLowerCase() === 'critical' ? 'text-red-500' : 'text-primary'}>
+                                                    {alert.severity}
+                                                </span>
+                                                <span>{new Date(alert.published_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900 hover:text-primary cursor-pointer leading-tight transition-colors line-clamp-2">
+                                                {alert.title}
+                                            </p>
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 hover:text-primary cursor-pointer leading-tight transition-colors">
-                                            New &quot;DarkGate&quot; Ransomware variant identified in sector 4.
-                                        </p>
-                                    </div>
-
-                                    <div className="border-b border-gray-100 pb-4">
-                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                                            <span>Vulnerability</span>
-                                            <span>Yesterday</span>
-                                        </div>
-                                        <p className="text-sm font-medium text-gray-900 hover:text-primary cursor-pointer leading-tight transition-colors">
-                                            Legacy protocols in VPN infrastructure facilitates unauthorized access.
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                                            <span>Patch Alert</span>
-                                            <span>Apr 12</span>
-                                        </div>
-                                        <p className="text-sm font-medium text-gray-900 hover:text-primary cursor-pointer leading-tight transition-colors">
-                                            Critical patch update required for Chromium browsers.
-                                        </p>
-                                    </div>
+                                    ))}
+                                    {alerts.length === 0 && !isFetching && (
+                                        <p className="text-xs text-gray-500 text-center py-4">No active advisories.</p>
+                                    )}
                                 </div>
 
                                 <div className="mt-5 pt-4 border-t border-gray-100 text-center">
