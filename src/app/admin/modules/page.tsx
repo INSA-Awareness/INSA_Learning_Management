@@ -199,8 +199,8 @@ export default function AdminModulesPage() {
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                                 <input
                                     type="text"
-                                    placeholder="Module title..."
-                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                                    placeholder="Search by module title..."
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                                 />
@@ -331,7 +331,7 @@ export default function AdminModulesPage() {
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
                         <textarea
-                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px]"
+                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
                             value={form.description}
                             onChange={e => setForm({ ...form, description: e.target.value })}
                             disabled={isActionLoading}
@@ -342,7 +342,7 @@ export default function AdminModulesPage() {
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Learning Objectives</label>
                         <textarea
-                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px]"
+                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
                             value={form.learning_objectives}
                             onChange={e => setForm({ ...form, learning_objectives: e.target.value })}
                             disabled={isActionLoading}

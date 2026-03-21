@@ -88,8 +88,8 @@ export default function Home() {
               <p className="mt-3 text-gray-600 text-sm leading-relaxed mb-6">
                 Delivering actionable guidance and tools to establish robust digital defenses for all sectors.
               </p>
-              <Link href="/resources" className="text-green-600 font-semibold text-sm hover:underline flex items-center gap-1">
-                Access Toolkit &rarr;
+              <Link href="/tools" className="text-green-600 font-semibold text-sm hover:underline flex items-center gap-1">
+                Explore Tools &rarr;
               </Link>
             </div>
           </div>

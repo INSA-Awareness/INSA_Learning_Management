@@ -3,24 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getCampaigns, Campaign } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
-
-interface Campaign {
-    id: string;
-    organization: string;
-    title: string;
-    message: string;
-    start_date: string;
-    send_time: string;
-    channels: string;
-    status: string;
-    impressions?: number;
-    clicks?: number;
-}
 
 interface Organization {
     id: string;
@@ -77,7 +64,12 @@ export default function AdminCampaignsPage() {
             search: searchTerm,
             ordering: '-start_date'
         }).toString();
-        const { data, error: e } = await apiFetch(`/api/v1/campaigns/?${query}`);
+        const { data, error: e } = await getCampaigns({
+            page: page.toString(),
+            page_size: pageSize.toString(),
+            search: searchTerm,
+            ordering: '-start_date'
+        });
         if (e) setError(e);
         else if (data?.results) {
             setCamps(data.results);
@@ -267,7 +259,7 @@ export default function AdminCampaignsPage() {
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Campaign Message</label>
-                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary outline-none transition-all min-h-[100px]" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required disabled={isActionLoading} />
+                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[100px]" placeholder="Enter campaign message..." value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required disabled={isActionLoading} />
                     </div>
                     <div className="pt-4 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isActionLoading}>Cancel</Button>

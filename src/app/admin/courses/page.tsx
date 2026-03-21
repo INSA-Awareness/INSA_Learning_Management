@@ -342,7 +342,7 @@ export default function AdminCoursesPage() {
                     <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px] resize-y" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading} />
+                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px] resize-y" placeholder="Enter course description..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading} />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Organization {user?.role === 'super_admin' && <span className="text-red-500">*</span>}</label>

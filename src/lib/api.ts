@@ -146,6 +146,20 @@ export interface Alert {
     views_count: number;
 }
 
+export interface Campaign {
+    id: string;
+    organization: string;
+    title: string;
+    message: string;
+    start_date: string;
+    send_time: string;
+    channels: string;
+    status: 'draft' | 'active' | 'completed';
+    impressions?: number;
+    clicks?: number;
+    image_url?: string;
+}
+
 export interface AlertDelivery {
     id: string;
     alert: string;
@@ -379,6 +393,18 @@ export const configureAwarenessTool = (id: string, data: any) =>
 export const toggleAwarenessToolStatus = (id: string, data: any = {}) =>
     apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/toggle-status/`, { method: 'PATCH', body: JSON.stringify(data) });
 
+export const getPublicAwarenessTools = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    // User requested to use the superadmin endpoint for fetching tools
+    return apiFetch<PaginatedResponse<AwarenessTool>>(`/api/v1/superadmin/awareness-tools/${query}`);
+};
+
+export const recordAwarenessToolUsage = (data: { tool: string; action: string; metadata?: string }) =>
+    apiFetch<AwarenessToolUsage>('/api/v1/superadmin/awareness-tool-usages/', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+
 export const getAwarenessToolUsage = (id: string) =>
     apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/usage/`);
 
@@ -470,6 +496,13 @@ export const getAlertViews = (params?: Record<string, any>) => {
 // Enrollments
 export const getEnrollments = () =>
     apiFetch<PaginatedResponse<Enrollment>>('/api/v1/enrollments/');
+
+// Campaigns
+export const getCampaigns = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<Campaign>>(`/api/v1/campaigns/${query}`);
+};
+
 
 export const enrollInCourse = (courseId: string, userId: string) =>
     apiFetch<Enrollment>('/api/v1/enrollments/', {

@@ -41,9 +41,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               ${icon ? 'pl-10' : 'pl-3'}
               ${isPassword && showPasswordToggle ? 'pr-10' : 'pr-3'}
               py-2.5 text-sm shadow-sm
-              bg-white text-gray-900 placeholder-gray-400
-              focus:outline-none focus:ring-1
+              bg-white text-gray-900 placeholder:text-gray-500
+              focus:outline-none focus:ring-2 focus:ring-primary/20
               disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500
+              border-gray-300
               ${className}
             `}
                         {...props}

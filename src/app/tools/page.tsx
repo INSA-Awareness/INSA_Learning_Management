@@ -1,37 +1,62 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
+import { getPublicAwarenessTools, recordAwarenessToolUsage, AwarenessTool } from '@/lib/api';
 
-const tools = [
-    {
-        id: 'phishing',
-        title: 'Phishing Simulation',
-        description: 'Practice identifying malicious emails in a safe, controlled environment.',
-        icon: '🎣',
-        href: '/tools/phishing',
-        color: 'bg-red-50 text-red-600'
-    },
-    {
-        id: 'password',
-        title: 'Password Strength',
-        description: 'Test your passwords against modern cracking techniques and learn how to improve them.',
-        icon: '🛡️',
-        href: '/tools/password-strength',
-        color: 'bg-blue-50 text-blue-600'
-    },
-    {
-        id: 'assessment',
-        title: 'Self-Assessment',
-        description: 'Measure your cybersecurity knowledge and get personalized recommendations.',
-        icon: '🧠',
-        href: '/tools/self-assessment',
-        color: 'bg-purple-50 text-purple-600'
-    }
-];
+const toolThemes: Record<string, { icon: string; color: string }> = {
+    'phishing': { icon: '🎣', color: 'bg-red-50 text-red-600' },
+    'password': { icon: '🛡️', color: 'bg-blue-50 text-blue-600' },
+    'assessment': { icon: '🧠', color: 'bg-purple-50 text-purple-600' },
+    'default': { icon: '🛠️', color: 'bg-gray-50 text-gray-600' }
+};
 
 export default function ToolsLandingPage() {
+    const [tools, setTools] = useState<AwarenessTool[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        fetchTools();
+    }, []);
+
+    const fetchTools = async () => {
+        setIsLoading(true);
+        const { data, error: e } = await getPublicAwarenessTools();
+        if (e) setError(e);
+        else if (data?.results) setTools(data.results);
+        else if (Array.isArray(data)) setTools(data as any);
+        setIsLoading(false);
+    };
+
+    const getTheme = (name: string) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('phish')) return toolThemes.phishing;
+        if (lowerName.includes('password')) return toolThemes.password;
+        if (lowerName.includes('assessment') || lowerName.includes('test')) return toolThemes.assessment;
+        return toolThemes.default;
+    };
+
+    const getHref = (name: string) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('phish')) return '/tools/phishing';
+        if (lowerName.includes('password')) return '/tools/password-strength';
+        if (lowerName.includes('assessment') || lowerName.includes('test')) return '/tools/self-assessment';
+        return '#';
+    };
+
+    const handleLaunch = async (tool: AwarenessTool) => {
+        const href = getHref(tool.name);
+        if (href !== '#') {
+            await recordAwarenessToolUsage({
+                tool: tool.id,
+                action: 'launch',
+                metadata: `User launched ${tool.name}`
+            });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <div className="bg-white border-b border-gray-200">
@@ -45,21 +70,41 @@ export default function ToolsLandingPage() {
             </div>
 
             <div className="max-w-5xl mx-auto px-6 mt-16">
+                {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 mb-8">{error}</div>}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {tools.map((tool) => (
-                        <div key={tool.id} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col items-center text-center">
-                            <div className={`w-20 h-20 rounded-2xl ${tool.color} flex items-center justify-center text-4xl mb-6 shadow-sm group-hover:scale-110 transition-transform`}>
-                                {tool.icon}
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-900 mb-3">{tool.title}</h2>
-                            <p className="text-sm text-gray-500 mb-8 flex-1 leading-relaxed">
-                                {tool.description}
-                            </p>
-                            <Link href={tool.href} className="w-full">
-                                <Button variant="primary" className="w-full">Launch Tool &rarr;</Button>
-                            </Link>
+                    {isLoading ? (
+                        [1, 2, 3].map(i => (
+                            <div key={i} className="bg-white h-80 rounded-[2.5rem] border border-gray-100 animate-pulse"></div>
+                        ))
+                    ) : tools.length === 0 ? (
+                        <div className="md:col-span-3 bg-white rounded-[2.5rem] border border-gray-100 p-20 text-center shadow-sm">
+                            <div className="text-5xl mb-4">🛠️</div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">No interactive tools available</h3>
+                            <p className="text-gray-500">We are currently developing new awareness tools. Please check back later!</p>
                         </div>
-                    ))}
+                    ) : (
+                        tools.map((tool) => {
+                            const theme = getTheme(tool.name);
+                            const href = getHref(tool.name);
+                            return (
+                                <div key={tool.id} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col items-center text-center">
+                                    <div className={`w-20 h-20 rounded-2xl ${theme.color} flex items-center justify-center text-4xl mb-6 shadow-sm group-hover:scale-110 transition-transform`}>
+                                        {theme.icon}
+                                    </div>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-3">{tool.name}</h2>
+                                    <p className="text-sm text-gray-500 mb-8 flex-1 leading-relaxed">
+                                        {tool.description}
+                                    </p>
+                                    <Link href={href} className="w-full" onClick={() => handleLaunch(tool)}>
+                                        <Button variant="primary" className="w-full" disabled={href === '#'}>
+                                            Launch Tool &rarr;
+                                        </Button>
+                                    </Link>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
 
                 <div className="mt-20 bg-primary rounded-[2.5rem] p-12 text-white flex flex-col lg:flex-row items-center gap-12 relative overflow-hidden">

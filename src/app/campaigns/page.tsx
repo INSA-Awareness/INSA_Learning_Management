@@ -2,16 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getCampaigns, Campaign } from '@/lib/api';
 
-interface Campaign {
-    id: string;
-    title: string;
-    message: string;
-    start_date: string;
-    status: string;
-    image_url?: string;
-}
+
 
 export default function CampaignsPage() {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -24,10 +17,10 @@ export default function CampaignsPage() {
 
     const fetchCampaigns = async () => {
         setIsLoading(true);
-        const { data, error: e } = await apiFetch('/api/v1/campaigns/');
+        const { data, error: e } = await getCampaigns({ status: 'active' });
         if (e) setError(e);
         else if (data?.results) setCampaigns(data.results);
-        else if (Array.isArray(data)) setCampaigns(data);
+        else if (Array.isArray(data)) setCampaigns(data as any);
         setIsLoading(false);
     };
 

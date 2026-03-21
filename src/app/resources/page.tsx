@@ -7,7 +7,7 @@ import { Button } from '@/components/Button';
 interface Resource {
     id: string;
     title: string;
-    file?: string;
+    file_url?: string;
     resource_type?: string;
     description?: string;
     uploaded_at?: string;
@@ -41,7 +41,7 @@ export default function ResourcesPage() {
     };
 
     const getIcon = (r: Resource) => {
-        const ext = r.file?.split('.').pop()?.toLowerCase() || r.resource_type?.toLowerCase() || '';
+        const ext = r.file_url?.split('.').pop()?.toLowerCase() || r.resource_type?.toLowerCase() || '';
         return typeIcon[ext] || '📁';
     };
 
@@ -117,14 +117,14 @@ export default function ResourcesPage() {
                                                 {resource.resource_type}
                                             </span>
                                         )}
-                                        {resource.file && (
+                                        {resource.file_url && (
                                             <a
-                                                href={resource.file}
+                                                href={resource.file_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-xs font-semibold text-primary hover:underline ml-auto"
+                                                className="text-xs font-semibold text-primary hover:underline ml-auto flex items-center gap-1"
                                             >
-                                                Download ↗
+                                                Open Resource ↗
                                             </a>
                                         )}
                                     </div>

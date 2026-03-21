@@ -412,7 +412,7 @@ export default function AdminResourcesPage() {
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Content</label>
-                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[100px] resize-y" value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} disabled={isActionLoading} />
+                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[100px] resize-y" placeholder="Enter resource description or content..." value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} disabled={isActionLoading} />
                     </div>
                     <CloudinaryUpload
                         label="Resource File"
