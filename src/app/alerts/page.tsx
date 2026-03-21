@@ -33,6 +33,17 @@ export default function AlertsPage() {
         setIsLoading(false);
     };
 
+    const handleAcknowledge = async (id: string) => {
+        const { error: e } = await apiFetch(`/api/v1/alerts/${id}/acknowledge/`, { method: 'POST' });
+        if (!e) fetchAlerts();
+    };
+
+    const handleViewDetails = (alert: Alert) => {
+        // Here we could open a modal or navigate to a detail page
+        // For now, let's acknowledge it as viewed
+        handleAcknowledge(alert.id);
+    };
+
     const filteredAlerts = alerts.filter(a => filter === 'all' || a.severity.toLowerCase() === filter);
 
     const severityStyles: Record<string, string> = {
@@ -104,8 +115,11 @@ export default function AlertsPage() {
                                         {alert.message || alert.description}
                                     </p>
                                     <div className="flex justify-end pt-4 border-t border-gray-50">
-                                        <button className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">
-                                            Full Technical Details &rarr;
+                                        <button
+                                            onClick={() => handleViewDetails(alert)}
+                                            className="text-xs font-bold text-primary hover:underline uppercase tracking-widest"
+                                        >
+                                            Dismiss / Acknowledge &rarr;
                                         </button>
                                     </div>
                                 </div>

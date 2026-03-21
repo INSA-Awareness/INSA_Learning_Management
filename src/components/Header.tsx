@@ -42,6 +42,7 @@ const adminGroups = [
             { label: 'Assessments', href: '/admin/assessments', roles: ['super_admin', 'course_provider'] },
             { label: 'Reports', href: '/admin/reports', roles: ['super_admin', 'org_admin'] },
             { label: 'Alerts', href: '/admin/alerts', roles: ['super_admin'] },
+            { label: 'Awareness Tools', href: '/admin/awareness-tools', roles: ['super_admin'] },
             { label: 'Audit Logs', href: '/admin/audit-logs', roles: ['super_admin'] },
         ]
     }

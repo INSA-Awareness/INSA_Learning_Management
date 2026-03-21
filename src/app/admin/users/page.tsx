@@ -79,16 +79,16 @@ export default function AdminUsersPage() {
         setIsFetching(false);
     };
 
-    const handleOpenModal = (user?: UserData) => {
+    const handleOpenModal = (targetUser?: UserData) => {
         setActionError('');
-        if (user) {
-            setSelectedUser(user);
+        if (targetUser) {
+            setSelectedUser(targetUser);
             setFormData({
-                first_name: user.first_name,
-                last_name: user.last_name,
-                email: user.email,
+                first_name: targetUser.first_name,
+                last_name: targetUser.last_name,
+                email: targetUser.email,
                 password: '', // Leave blank for edit unless changing
-                role: user.role || 'member',
+                role: targetUser.role || 'member',
                 organization_id: '', // Role-specific creation only usually
                 preferred_language: 'en'
             });
@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
                 last_name: '',
                 email: '',
                 password: '',
-                role: 'member',
+                role: user?.role === 'org_admin' ? 'member' : 'member', // Default to member
                 organization_id: organizations[0]?.id || '',
                 preferred_language: 'en'
             });
@@ -252,7 +252,7 @@ export default function AdminUsersPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    users.map((u) => (
+                                    users.filter(u => u.id !== user?.id).map((u) => (
                                         <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 {u.first_name} {u.last_name}
@@ -329,15 +329,15 @@ export default function AdminUsersPage() {
                                     Organization
                                 </label>
                                 <select
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
                                     value={formData.organization_id}
                                     onChange={(e) => setFormData({ ...formData, organization_id: e.target.value })}
                                     disabled={isActionLoading}
                                     required
                                 >
-                                    <option value="">Select Organization</option>
+                                    <option value="" className="text-gray-900">Select Organization</option>
                                     {organizations.map(org => (
-                                        <option key={org.id} value={org.id}>{org.name}</option>
+                                        <option key={org.id} value={org.id} className="text-gray-900">{org.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -346,13 +346,13 @@ export default function AdminUsersPage() {
                                     Language
                                 </label>
                                 <select
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
                                     value={formData.preferred_language}
                                     onChange={(e) => setFormData({ ...formData, preferred_language: e.target.value })}
                                     disabled={isActionLoading}
                                 >
-                                    <option value="en">English</option>
-                                    <option value="am">Amharic</option>
+                                    <option value="en" className="text-gray-900">English</option>
+                                    <option value="am" className="text-gray-900">Amharic</option>
                                 </select>
                             </div>
                         </div>
@@ -362,18 +362,24 @@ export default function AdminUsersPage() {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">
                             User Role
                         </label>
-                        <select
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                            disabled={isActionLoading}
-                        >
-                            <option value="member">Member</option>
-                            <option value="course_provider">Course Provider</option>
-                            <option value="org_admin">Organization Admin</option>
-                            <option value="super_admin">Super Admin</option>
-                            <option value="user">Regular User</option>
-                        </select>
+                        {user?.role === 'org_admin' ? (
+                            <div className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
+                                Member
+                            </div>
+                        ) : (
+                            <select
+                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                                value={formData.role}
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                disabled={isActionLoading}
+                            >
+                                <option value="member" className="text-gray-900">Member</option>
+                                <option value="course_provider" className="text-gray-900">Course Provider</option>
+                                <option value="org_admin" className="text-gray-900">Organization Admin</option>
+                                <option value="super_admin" className="text-gray-900">Super Admin</option>
+                                <option value="user" className="text-gray-900">Regular User</option>
+                            </select>
+                        )}
                     </div>
 
                     {(formData.role === 'user' || selectedUser) && (

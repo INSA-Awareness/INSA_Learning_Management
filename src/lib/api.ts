@@ -15,6 +15,7 @@ export interface User {
     preferred_language: string;
     is_active: boolean;
     must_change_password?: boolean;
+    organization_id?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -57,15 +58,53 @@ export interface Resource {
     updated_at: string;
 }
 
+export interface Enrollment {
+    id: string;
+    user: string;
+    course: {
+        id: string;
+        title: string;
+        difficulty: string;
+    } | string;
+    progress: number;
+    status: 'in_progress' | 'completed';
+    last_accessed: string;
+}
+
 export interface TrainingRequest {
     id: string;
     organization: string;
+    organization_name?: string;
     created_by: string;
+    title?: string;
     description: string;
-    attachment_url: string;
-    status: 'pending' | 'approved' | 'rejected';
+    attachment_url?: string;
+    status: 'pending' | 'approved' | 'rejected' | 'forwarded';
     created_at: string;
     updated_at: string;
+}
+
+export interface AwarenessTool {
+    id: string;
+    name: string;
+    description: string;
+    status: 'enabled' | 'disabled';
+    config: string;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+    usage_count: number;
+}
+
+export interface AwarenessToolUsage {
+    id: string;
+    tool: string;
+    tool_name: string;
+    user: string;
+    user_email: string;
+    action: string;
+    metadata: string;
+    created_at: string;
 }
 
 export interface Video {
@@ -86,6 +125,45 @@ export interface Course {
     status: 'draft' | 'published' | 'archived';
     created_at: string;
     updated_at: string;
+}
+
+export interface Alert {
+    id: string;
+    title: string;
+    message: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    status: 'draft' | 'published' | 'archived';
+    notify_email: boolean;
+    notify_sms: boolean;
+    organization: string;
+    created_by: string;
+    published_at: string;
+    created_at: string;
+    updated_at: string;
+    total_deliveries: number;
+    sent_deliveries: number;
+    failed_deliveries: number;
+    views_count: number;
+}
+
+export interface AlertDelivery {
+    id: string;
+    alert: string;
+    user: string;
+    user_email: string;
+    channel: 'email' | 'sms';
+    status: 'pending' | 'sent' | 'failed';
+    detail: string;
+    delivered_at: string;
+    created_at: string;
+}
+
+export interface AlertView {
+    id: string;
+    alert: string;
+    user: string;
+    user_email: string;
+    viewed_at: string;
 }
 
 // Token Management Hook-like helpers for local storage
@@ -271,11 +349,51 @@ export const updateTrainingRequest = (id: string, data: Partial<TrainingRequest>
 export const deleteTrainingRequest = (id: string) =>
     apiFetch(`/api/v1/training-requests/${id}/`, { method: 'DELETE' });
 
-export const approveTrainingRequest = (id: string, data: any) =>
-    apiFetch<TrainingRequest>(`/api/v1/training-requests/${id}/approve/`, { method: 'POST', body: JSON.stringify(data) });
+export const approveTrainingRequest = (id: string, data?: any) =>
+    apiFetch<TrainingRequest>(`/api/v1/training-requests/${id}/approve/`, { method: 'POST', body: JSON.stringify(data || {}) });
 
-export const rejectTrainingRequest = (id: string, data: any) =>
-    apiFetch<TrainingRequest>(`/api/v1/training-requests/${id}/reject/`, { method: 'POST', body: JSON.stringify(data) });
+export const rejectTrainingRequest = (id: string, data?: any) =>
+    apiFetch<TrainingRequest>(`/api/v1/training-requests/${id}/reject/`, { method: 'POST', body: JSON.stringify(data || {}) });
+
+// Awareness Tools (SuperAdmin)
+export const getAwarenessTools = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<AwarenessTool>>(`/api/v1/superadmin/awareness-tools/${query}`);
+};
+
+export const createAwarenessTool = (data: Partial<AwarenessTool>) =>
+    apiFetch<AwarenessTool>('/api/v1/superadmin/awareness-tools/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getAwarenessTool = (id: string) =>
+    apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/`);
+
+export const updateAwarenessTool = (id: string, data: Partial<AwarenessTool>, patch = true) =>
+    apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/`, { method: patch ? 'PATCH' : 'PUT', body: JSON.stringify(data) });
+
+export const deleteAwarenessTool = (id: string) =>
+    apiFetch(`/api/v1/superadmin/awareness-tools/${id}/`, { method: 'DELETE' });
+
+export const configureAwarenessTool = (id: string, data: any) =>
+    apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/configure/`, { method: 'POST', body: JSON.stringify(data) });
+
+export const toggleAwarenessToolStatus = (id: string, data: any = {}) =>
+    apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/toggle-status/`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const getAwarenessToolUsage = (id: string) =>
+    apiFetch<AwarenessTool>(`/api/v1/superadmin/awareness-tools/${id}/usage/`);
+
+export const getAwarenessToolUsageStats = () =>
+    apiFetch<AwarenessTool>('/api/v1/superadmin/awareness-tools/usage-stats/');
+
+// Awareness Tool Usages (SuperAdmin)
+export const getAwarenessToolUsages = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<AwarenessToolUsage>>(`/api/v1/superadmin/awareness-tool-usages/${query}`);
+};
+
+export const getAwarenessToolUsageDetail = (id: string) =>
+    apiFetch<AwarenessToolUsage>(`/api/v1/superadmin/awareness-tool-usages/${id}/`);
+
 
 // Videos
 export const getVideos = (params?: Record<string, any>) => {
@@ -312,3 +430,56 @@ export const updateCourse = (id: string, data: Partial<Course>, patch = true) =>
 
 export const deleteCourse = (id: string) =>
     apiFetch(`/api/v1/courses/${id}/`, { method: 'DELETE' });
+
+// Alerts
+export const getAlerts = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<Alert>>(`/api/v1/alerts/${query}`);
+};
+
+export const createAlert = (data: Partial<Alert>) =>
+    apiFetch<Alert>('/api/v1/alerts/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getAlert = (id: string) =>
+    apiFetch<Alert>(`/api/v1/alerts/${id}/`);
+
+export const updateAlert = (id: string, data: Partial<Alert>, patch = true) =>
+    apiFetch<Alert>(`/api/v1/alerts/${id}/`, { method: patch ? 'PATCH' : 'PUT', body: JSON.stringify(data) });
+
+export const deleteAlert = (id: string) =>
+    apiFetch(`/api/v1/alerts/${id}/`, { method: 'DELETE' });
+
+export const publishAlert = (id: string, data: any = {}) =>
+    apiFetch<Alert>(`/api/v1/alerts/${id}/publish/`, { method: 'POST', body: JSON.stringify(data) });
+
+export const acknowledgeAlert = (id: string, data: any = {}) =>
+    apiFetch<Alert>(`/api/v1/alerts/${id}/acknowledge/`, { method: 'POST', body: JSON.stringify(data) });
+
+// Alert Deliveries
+export const getAlertDeliveries = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<AlertDelivery>>(`/api/v1/alert-deliveries/${query}`);
+};
+
+// Alert Views
+export const getAlertViews = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<AlertView>>(`/api/v1/alert-views/${query}`);
+};
+
+// Enrollments
+export const getEnrollments = () =>
+    apiFetch<PaginatedResponse<Enrollment>>('/api/v1/enrollments/');
+
+export const enrollInCourse = (courseId: string, userId: string) =>
+    apiFetch<Enrollment>('/api/v1/enrollments/', {
+        method: 'POST',
+        body: JSON.stringify({
+            user: userId,
+            course: courseId,
+            progress: 0,
+            status: 'in_progress'
+        })
+    });
+
+

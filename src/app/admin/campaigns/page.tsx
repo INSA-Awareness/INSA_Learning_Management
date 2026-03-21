@@ -246,8 +246,8 @@ export default function AdminCampaignsPage() {
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Organization</label>
                             <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} required disabled={isActionLoading}>
-                                <option value="">Select Organization</option>
-                                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                <option value="" className="text-gray-900">Select Organization</option>
+                                {orgs.map(o => <option key={o.id} value={o.id} className="text-gray-900">{o.name}</option>)}
                             </select>
                         </div>
                         <Input label="Channels (e.g. Email, SMS)" value={form.channels} onChange={e => setForm({ ...form, channels: e.target.value })} required disabled={isActionLoading} />
@@ -260,9 +260,9 @@ export default function AdminCampaignsPage() {
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                         <select className={SELECT_CLS} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} disabled={isActionLoading}>
-                            <option value="draft">Draft</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
+                            <option value="draft" className="text-gray-900">Draft</option>
+                            <option value="active" className="text-gray-900">Active</option>
+                            <option value="completed" className="text-gray-900">Completed</option>
                         </select>
                     </div>
                     <div>

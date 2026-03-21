@@ -11,8 +11,10 @@ interface Course {
     description: string;
     language: string;
     difficulty?: string;
+    level?: string;
     status?: string;
     provider?: string;
+    created_at?: string;
 }
 
 export default function TrainingPage() {
@@ -21,6 +23,7 @@ export default function TrainingPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
+    const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState('Newest');
 
     useEffect(() => {
@@ -41,12 +44,26 @@ export default function TrainingPage() {
 
     let filteredCourses = courses.filter(course => {
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesDiff = selectedDifficulty.length === 0 || selectedDifficulty.includes(course.difficulty || '');
-        return matchesSearch && matchesDiff;
+        const itemLevel = (course.level || course.difficulty || '').toLowerCase();
+        const matchesDiff = selectedDifficulty.length === 0 || selectedDifficulty.includes(itemLevel);
+        const matchesLang = selectedLanguages.length === 0 || selectedLanguages.includes(course.language || '');
+        return matchesSearch && matchesDiff && matchesLang;
     });
 
     if (sortBy === 'Alphabetical') {
         filteredCourses = [...filteredCourses].sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'Newest') {
+        filteredCourses = [...filteredCourses].sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+        });
+    } else if (sortBy === 'Oldest') {
+        filteredCourses = [...filteredCourses].sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateA - dateB;
+        });
     }
 
     const difficultyColors: Record<string, string> = {
@@ -92,7 +109,7 @@ export default function TrainingPage() {
                 {/* Sidebar */}
                 <div className="w-full lg:w-64 shrink-0 space-y-8">
                     <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Difficulty</h4>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Level</h4>
                         <div className="space-y-3">
                             {['beginner', 'medium', 'advanced'].map(item => (
                                 <label key={item} className="flex items-center gap-3 cursor-pointer group">
@@ -104,6 +121,30 @@ export default function TrainingPage() {
                                 </label>
                             ))}
                         </div>
+                    </div>
+
+                    <div>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">Language</h4>
+                        <div className="space-y-3">
+                            {['en', 'am', 'om', 'so', 'ti'].map(item => (
+                                <label key={item} className="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" className="hidden" checked={selectedLanguages.includes(item)} onChange={() => handleCheckboxChange(setSelectedLanguages, item)} />
+                                    <div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedLanguages.includes(item) ? 'bg-primary border-primary' : 'bg-white border-gray-300 group-hover:border-primary'}`}>
+                                        {selectedLanguages.includes(item) && <span className="text-white text-[10px]">&#10003;</span>}
+                                    </div>
+                                    <span className="text-sm text-gray-600 group-hover:text-primary transition-colors uppercase">{item}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        {(selectedDifficulty.length > 0 || selectedLanguages.length > 0 || searchQuery) && (
+                            <button
+                                onClick={() => { setSelectedDifficulty([]); setSelectedLanguages([]); setSearchQuery(''); }}
+                                className="text-xs text-primary font-bold hover:text-primary-hover transition-colors flex items-center gap-1 pt-4"
+                            >
+                                ✕ Clear all filters
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -118,8 +159,9 @@ export default function TrainingPage() {
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >
-                            <option>Newest</option>
-                            <option>Alphabetical</option>
+                            <option value="Newest">Newest</option>
+                            <option value="Oldest">Oldest</option>
+                            <option value="Alphabetical">Alphabetical</option>
                         </select>
                     </div>
 
@@ -141,9 +183,9 @@ export default function TrainingPage() {
                                 const color = difficultyColors[diff] || 'gray';
                                 return (
                                     <div key={course.id} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/20 transition-all cursor-pointer flex flex-col h-full relative group">
-                                        {course.difficulty && (
-                                            <div className={`absolute top-6 right-6 px-2 py-1 bg-${color}-50 text-${color}-600 text-[10px] font-bold rounded-full uppercase tracking-wider`}>
-                                                {course.difficulty}
+                                        {(course.level || course.difficulty) && (
+                                            <div className={`absolute top-6 right-6 px-2 py-1 bg-${difficultyColors[(course.level || course.difficulty || '').toLowerCase()] || 'gray'}-50 text-${difficultyColors[(course.level || course.difficulty || '').toLowerCase()] || 'gray'}-600 text-[10px] font-bold rounded-full uppercase tracking-wider`}>
+                                                {course.level || course.difficulty}
                                             </div>
                                         )}
                                         <div className="w-10 h-10 rounded-xl bg-primary/10 text-xl flex items-center justify-center mb-4 shrink-0 transition-transform group-hover:scale-110">

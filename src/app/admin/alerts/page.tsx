@@ -11,11 +11,19 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface Alert {
     id: string;
-    title?: string;
+    title: string;
     message: string;
     severity: string;
+    status: string;
+    notify_email: boolean;
+    notify_sms: boolean;
+    organization: string;
     published_at: string;
-    description?: string;
+}
+
+interface Organization {
+    id: string;
+    name: string;
 }
 
 const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
@@ -24,23 +32,43 @@ export default function AdminAlertsPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [orgs, setOrgs] = useState<Organization[]>([]);
     const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [actionError, setActionError] = useState('');
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-    const [form, setForm] = useState({ title: '', message: '', severity: 'medium' });
+    const [form, setForm] = useState({
+        title: '',
+        message: '',
+        severity: 'low',
+        organization: '',
+        notify_email: true,
+        notify_sms: true
+    });
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!isLoading && isAuthenticated && (user?.role === 'super_admin' || user?.role === 'org_admin')) {
+            fetchOrgs();
+        }
+    }, [isAuthenticated, isLoading, user]);
+
+    useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
             else fetchAlerts();
         }
     }, [isAuthenticated, isLoading, user, router]);
+
+    const fetchOrgs = async () => {
+        const { data } = await apiFetch('/api/v1/organizations/');
+        if (data?.results) setOrgs(data.results);
+        else if (Array.isArray(data)) setOrgs(data);
+    };
 
     const fetchAlerts = async () => {
         setIsFetching(true); setError('');
@@ -55,10 +83,24 @@ export default function AdminAlertsPage() {
         setActionError('');
         if (alert) {
             setSelectedAlert(alert);
-            setForm({ title: alert.title || '', message: alert.message || '', severity: alert.severity || 'medium' });
+            setForm({
+                title: alert.title || '',
+                message: alert.message || '',
+                severity: alert.severity || 'low',
+                organization: alert.organization || '',
+                notify_email: alert.notify_email ?? true,
+                notify_sms: alert.notify_sms ?? true
+            });
         } else {
             setSelectedAlert(null);
-            setForm({ title: '', message: '', severity: 'medium' });
+            setForm({
+                title: '',
+                message: '',
+                severity: 'low',
+                organization: '',
+                notify_email: true,
+                notify_sms: true
+            });
         }
         setIsModalOpen(true);
     };
@@ -70,6 +112,14 @@ export default function AdminAlertsPage() {
         const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(form) });
         if (apiErr || (status !== 200 && status !== 201)) setActionError(apiErr || 'Failed to save.');
         else { fetchAlerts(); setIsModalOpen(false); }
+        setIsActionLoading(false);
+    };
+
+    const handlePublish = async (id: string) => {
+        setIsActionLoading(true);
+        const { error: e, status } = await apiFetch(`/api/v1/alerts/${id}/publish/`, { method: 'POST' });
+        if (e || status !== 200) setError(e || 'Failed to publish.');
+        else fetchAlerts();
         setIsActionLoading(false);
     };
 
@@ -90,7 +140,7 @@ export default function AdminAlertsPage() {
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || user.role !== 'super_admin') return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -109,7 +159,7 @@ export default function AdminAlertsPage() {
                     <table className="w-full text-left text-sm text-gray-500">
                         <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
                             <tr>
-                                <th className="px-6 py-4">Status & Severity</th>
+                                <th className="px-6 py-4">Severity / Status</th>
                                 <th className="px-6 py-4">Title / Message</th>
                                 <th className="px-6 py-4">Published</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
@@ -121,19 +171,31 @@ export default function AdminAlertsPage() {
                             ) : alerts.map(a => (
                                 <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${a.severity === 'critical' ? 'bg-red-50 text-red-700' :
-                                            a.severity === 'high' ? 'bg-orange-50 text-orange-700' :
-                                                'bg-blue-50 text-blue-700'
-                                            }`}>
-                                            {a.severity}
-                                        </span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest w-fit ${a.severity === 'critical' ? 'bg-red-50 text-red-700' :
+                                                a.severity === 'high' ? 'bg-orange-50 text-orange-700' :
+                                                    a.severity === 'medium' ? 'bg-yellow-50 text-yellow-700' :
+                                                        'bg-blue-50 text-blue-700'
+                                                }`}>
+                                                {a.severity}
+                                            </span>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest w-fit ${a.status === 'published' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                {a.status}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="font-medium text-gray-900">{a.title}</div>
                                         <div className="text-gray-500 truncate max-w-sm">{a.message}</div>
                                     </td>
-                                    <td className="px-6 py-4 text-xs">{new Date(a.published_at).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-xs whitespace-nowrap">
+                                        {a.published_at ? new Date(a.published_at).toLocaleDateString() : 'Not published'}
+                                    </td>
                                     <td className="px-6 py-4 text-right whitespace-nowrap">
+                                        {a.status !== 'published' && (
+                                            <button onClick={() => handlePublish(a.id)} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Publish</button>
+                                        )}
                                         <button onClick={() => openModal(a)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
                                         <button onClick={() => handleDelete(a.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
                                     </td>
@@ -147,22 +209,44 @@ export default function AdminAlertsPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
                     <Input label="Alert Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Severity</label>
-                        <select className={SELECT_CLS} value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })} disabled={isActionLoading}>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="critical">Critical</option>
-                        </select>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Organization</label>
+                            <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} required disabled={isActionLoading}>
+                                <option value="" className="text-gray-900">Select Organization</option>
+                                {orgs.map(o => <option key={o.id} value={o.id} className="text-gray-900">{o.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Severity</label>
+                            <select className={SELECT_CLS} value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })} disabled={isActionLoading}>
+                                <option value="low" className="text-gray-900">Low</option>
+                                <option value="medium" className="text-gray-900">Medium</option>
+                                <option value="high" className="text-gray-900">High</option>
+                                <option value="critical" className="text-gray-900">Critical</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <div className="flex gap-6 py-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={form.notify_email} onChange={e => setForm({ ...form, notify_email: e.target.checked })} disabled={isActionLoading} className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" />
+                            <span className="text-sm text-gray-700 font-medium">Notify via Email</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={form.notify_sms} onChange={e => setForm({ ...form, notify_sms: e.target.checked })} disabled={isActionLoading} className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" />
+                            <span className="text-sm text-gray-700 font-medium">Notify via SMS</span>
+                        </label>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Message Content</label>
                         <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary outline-none transition-all min-h-[100px]" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required disabled={isActionLoading} />
                     </div>
                     <div className="pt-4 flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isActionLoading}>Cancel</Button>
-                        <Button type="submit" variant="primary" disabled={isActionLoading}>{isActionLoading ? 'Saving...' : selectedAlert ? 'Save Changes' : 'Publish Alert'}</Button>
+                        <Button type="submit" variant="primary" disabled={isActionLoading}>{isActionLoading ? 'Saving...' : selectedAlert ? 'Save Changes' : 'Create Alert'}</Button>
                     </div>
                 </form>
             </Modal>

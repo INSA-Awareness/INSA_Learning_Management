@@ -13,7 +13,7 @@ interface Course { id: string; title: string; description?: string; difficulty?:
 export default function CourseDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [course, setCourse] = useState<Course | null>(null);
     const [modules, setModules] = useState<Module[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +44,12 @@ export default function CourseDetailPage() {
         setIsEnrolling(true); setEnrollError('');
         const { error: e, status } = await apiFetch('/api/v1/enrollments/', {
             method: 'POST',
-            body: JSON.stringify({ course: id })
+            body: JSON.stringify({
+                user: user?.id,
+                course: id,
+                progress: 0,
+                status: 'in_progress'
+            })
         });
         if (e || (status !== 200 && status !== 201)) {
             setEnrollError(e || 'Enrollment failed. You may already be enrolled.');

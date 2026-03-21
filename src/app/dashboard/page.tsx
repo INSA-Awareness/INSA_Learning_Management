@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getCourses, enrollInCourse, Course } from '@/lib/api';
 
 interface Enrollment {
     id: string;
@@ -31,6 +31,9 @@ export default function DashboardPage() {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [isFetching, setIsFetching] = useState(true);
+    const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (!isLoading) {
@@ -46,9 +49,10 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
         setIsFetching(true);
-        const [enrollRes, alertsRes] = await Promise.all([
+        const [enrollRes, alertsRes, coursesRes] = await Promise.all([
             apiFetch('/api/v1/enrollments/'),
-            apiFetch('/api/v1/alerts/?page_size=5')
+            apiFetch('/api/v1/alerts/?page_size=5'),
+            getCourses({ page_size: 6 })
         ]);
 
         if (enrollRes.data?.results) setEnrollments(enrollRes.data.results);
@@ -57,7 +61,28 @@ export default function DashboardPage() {
         if (alertsRes.data?.results) setAlerts(alertsRes.data.results);
         else if (Array.isArray(alertsRes.data)) setAlerts(alertsRes.data);
 
+        if (coursesRes.data?.results) {
+            const enrolledCourseIds = new Set(
+                (enrollRes.data?.results || (Array.isArray(enrollRes.data) ? enrollRes.data : []))
+                    .map((e: any) => typeof e.course === 'object' ? e.course.id : e.course)
+            );
+            setRecommendedCourses(coursesRes.data.results.filter((c: Course) => !enrolledCourseIds.has(c.id)).slice(0, 2));
+        }
+
         setIsFetching(false);
+    };
+
+    const handleEnroll = async (courseId: string) => {
+        if (!user) return;
+        setActionLoading(courseId);
+        setError('');
+        const { error: err, status } = await enrollInCourse(courseId, user.id);
+        if (err || (status !== 200 && status !== 201)) {
+            setError(err || 'Failed to enroll. You might already be enrolled.');
+        } else {
+            fetchDashboardData(); // Refresh data
+        }
+        setActionLoading(null);
     };
 
     if (isLoading || !isAuthenticated) return null;
@@ -110,7 +135,15 @@ export default function DashboardPage() {
                         </button>
                     </Link>
                 </div>
+            </div>
 
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-8 flex items-center justify-between">
+                        <span>{error}</span>
+                        <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">✕</button>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column (Main Content) */}
                     <div className="lg:col-span-2 space-y-8">
@@ -168,59 +201,40 @@ export default function DashboardPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
-                                    <div className="h-32 bg-secondary relative overflow-hidden border-b border-gray-800 flex items-center justify-center">
-                                        {/* Abstract tech background */}
-                                        <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0MCcgaGVpZ2h0PSc0MCc+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSdncmFkMScgeDE9JzAlJyB5MT0nMCUnIHgyPScxMDAlJyB5Mj0nMCUnPjxzdG9wIG9mZnNldD0nMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiNmZmY7c3RvcC1vcGFjaXR5OjEuMCcgLz48c3RvcCBvZmZzZXQ9JzEwMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiMwMDA7c3RvcC1vcGFjaXR5OjEuMCcgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0nNDAnJyBoZWlnaHQ9JzQwJScgZmlsbD0ndXJsKCNncmFkMSknIGZpbGwtb3BhY2l0eT0nMC4xJy8+PC9zdmc+')] mix-blend-overlay"></div>
-                                        <div className="w-24 h-24 border-[8px] border-blue-500/80 rounded-full border-t-transparent animate-spin-slow"></div>
+                                {recommendedCourses.map((course) => (
+                                    <div key={course.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
+                                        <div className="h-32 bg-secondary relative overflow-hidden border-b border-gray-800 flex items-center justify-center">
+                                            <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0MCcgaGVpZ2h0PSc0MCc+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSdncmFkMScgeDE9JzAlJyB5MT0nMCUnIHgyPScxMDAlJyB5Mj0nMCUnPjxzdG9wIG9mZnNldD0nMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiNmZmY7c3RvcC1vcGFjaXR5OjEuMCcgLz48c3RvcCBvZmZzZXQ9JzEwMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiMwMDA7c3RvcC1vcGFjaXR5OjEuMCcgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0nNDAnJyBoZWlnaHQ9JzQwJScgZmlsbD0ndXJsKCNncmFkMSknIGZpbGwtb3BhY2l0eT0nMC4xJy8+PC9zdmc+')] mix-blend-overlay"></div>
+                                            <div className="w-24 h-24 border-[8px] border-blue-500/80 rounded-full border-t-transparent animate-spin-slow"></div>
 
-                                        <div className="absolute bottom-3 left-3 flex gap-2">
-                                            <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">NEW</span>
-                                            <span className="bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm">15 MINS</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-5 flex flex-col flex-1">
-                                        <h3 className="font-bold text-gray-900 mb-2">Social Engineering Tactics</h3>
-                                        <p className="text-xs text-gray-500 mb-6 flex-1 line-clamp-2">
-                                            Learn to identify and neutralize sophisticated psychological manipulation techniques targeting...
-                                        </p>
-                                        <button className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm">
-                                            Start Module &rarr;
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
-                                    <div className="h-32 bg-[#0d1b2a] relative overflow-hidden border-b border-[#1b263b] flex items-center justify-center">
-                                        <div className="grid grid-cols-12 gap-1 w-full h-full p-2 opacity-30">
-                                            {Array.from({ length: 12 * 4 }).map((_, i) => (
-                                                <div key={i} className="bg-[#415a77] rounded-sm animate-pulse" style={{ animationDelay: `${i * 0.1}s` }}></div>
-                                            ))}
-                                        </div>
-                                        <div className="absolute bottom-3 left-3 flex gap-2">
-                                            <span className="bg-yellow-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">IN PROGRESS</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-5 flex flex-col flex-1">
-                                        <h3 className="font-bold text-gray-900 mb-2">Cyber Hygiene 101</h3>
-                                        <p className="text-xs text-gray-500 mb-4 flex-1 line-clamp-2">
-                                            Master foundational password management, 2FA setup, and secure browsing habits.
-                                        </p>
-                                        <div className="mb-4">
-                                            <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                                                <span>40% Complete</span>
-                                                <span>10m left</span>
-                                            </div>
-                                            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                                <div className="bg-yellow-500 h-1.5 rounded-full w-[40%]"></div>
+                                            <div className="absolute bottom-3 left-3 flex gap-2">
+                                                <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">NEW</span>
+                                                <span className={`text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm ${course.difficulty === 'beginner' ? 'bg-green-500/50' : course.difficulty === 'medium' ? 'bg-yellow-500/50' : 'bg-red-500/50'
+                                                    }`}>
+                                                    {course.difficulty}
+                                                </span>
                                             </div>
                                         </div>
-
-                                        <button className="w-full bg-white border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-                                            Continue
-                                        </button>
+                                        <div className="p-5 flex flex-col flex-1">
+                                            <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
+                                            <p className="text-xs text-gray-500 mb-6 flex-1 line-clamp-2">
+                                                {course.description}
+                                            </p>
+                                            <button
+                                                onClick={() => handleEnroll(course.id)}
+                                                disabled={actionLoading === course.id}
+                                                className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm disabled:opacity-50"
+                                            >
+                                                {actionLoading === course.id ? 'Enrolling...' : 'Enroll Now'}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
+                                {recommendedCourses.length === 0 && !isFetching && (
+                                    <div className="sm:col-span-2 bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
+                                        <p className="text-gray-500">No new recommendations at this time.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

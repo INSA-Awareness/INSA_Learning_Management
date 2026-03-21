@@ -129,6 +129,7 @@ export default function AdminDashboard() {
                             <QuickLink icon="📖" title="Courses & Content" description="Manage training courses, modules, and learning materials." href="/admin/courses" />
                             <QuickLink icon="📊" title="Reports" description="View compliance reports and platform analytics." href="/admin/reports" />
                             <QuickLink icon="🛡️" title="Audit Logs" description="Monitor system security events and user activity." href="/admin/audit-logs" />
+                            <QuickLink icon="🛠️" title="Awareness Tools" description="Configure and monitor interactive cybersecurity tools." href="/admin/awareness-tools" />
                         </div>
 
                         {/* Analytics */}
@@ -302,8 +303,8 @@ export default function AdminDashboard() {
                                         <div key={idx} className="py-3 flex justify-between items-center text-sm">
                                             <span className="text-gray-700">{item.msg}</span>
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${item.status === 'published' ? 'bg-green-50 text-green-700' :
-                                                    item.status === 'pending' ? 'bg-blue-50 text-blue-700' :
-                                                        'bg-yellow-50 text-yellow-700'
+                                                item.status === 'pending' ? 'bg-blue-50 text-blue-700' :
+                                                    'bg-yellow-50 text-yellow-700'
                                                 }`}>{item.status}</span>
                                         </div>
                                     ))}
