@@ -51,7 +51,7 @@ export default function AdminAlertsPage() {
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isLoading && isAuthenticated && (user?.role === 'super_admin' || user?.role === 'org_admin')) {
+        if (!isLoading && isAuthenticated && user?.role === 'super_admin') {
             fetchOrgs();
         }
     }, [isAuthenticated, isLoading, user]);
@@ -59,7 +59,7 @@ export default function AdminAlertsPage() {
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin') router.push('/dashboard');
+            else if (user?.role !== 'super_admin') router.push('/dashboard');
             else fetchAlerts();
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -140,7 +140,7 @@ export default function AdminAlertsPage() {
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin')) return null;
+    if (!user || user.role !== 'super_admin') return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">

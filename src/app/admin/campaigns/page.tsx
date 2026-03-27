@@ -73,6 +73,7 @@ export default function AdminCampaignsPage() {
         if (e) setError(e);
         else if (data?.results) {
             setCamps(data.results);
+            // console.log(data.results)
             setTotalCount(data.count || 0);
         }
         else if (Array.isArray(data)) {
@@ -192,7 +193,11 @@ export default function AdminCampaignsPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.status === 'live' ? 'bg-green-50 text-green-700' :
+                                            c.status === 'scheduled' ? 'bg-blue-50 text-blue-700' :
+                                                c.status === 'cancelled' ? 'bg-red-50 text-red-700' :
+                                                    'bg-gray-100 text-gray-600'
+                                            }`}>
                                             {c.status}
                                         </span>
                                     </td>
@@ -253,8 +258,10 @@ export default function AdminCampaignsPage() {
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                         <select className={SELECT_CLS} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} disabled={isActionLoading}>
                             <option value="draft" className="text-gray-900">Draft</option>
-                            <option value="active" className="text-gray-900">Active</option>
+                            <option value="scheduled" className="text-gray-900">Scheduled</option>
+                            <option value="live" className="text-gray-900">Live</option>
                             <option value="completed" className="text-gray-900">Completed</option>
+                            <option value="cancelled" className="text-gray-900">Cancelled</option>
                         </select>
                     </div>
                     <div>

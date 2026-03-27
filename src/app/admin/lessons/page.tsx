@@ -8,6 +8,8 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { CloudinaryUpload } from '@/components/CloudinaryUpload';
+// Simplified: Removed complex Builder imports as we are moving to a unified form
 
 interface Lesson {
     id: string;
@@ -52,7 +54,7 @@ export default function AdminLessonsPage() {
     const [form, setForm] = useState({
         module: '',
         title: '',
-        content_type: 'article',
+        content_type: 'video',
         language: 'en',
         content: '',
         media_url: '',
@@ -109,46 +111,89 @@ export default function AdminLessonsPage() {
         setIsFetching(false);
     };
 
-    const openModal = (lesson?: Lesson) => {
+    const handleAddNew = () => {
         setActionError('');
-        if (lesson) {
-            setSelectedLesson(lesson);
-            setForm({
-                module: lesson.module,
-                title: lesson.title,
-                content_type: lesson.content_type,
-                language: lesson.language,
-                content: lesson.content || '',
-                media_url: lesson.media_url || '',
-                image_url: lesson.image_url || '',
-                assessment_type: lesson.assessment_type || 'true_false',
-                assessment_payload: lesson.assessment_payload || '',
-                order: lesson.order
-            });
-        } else {
-            setSelectedLesson(null);
-            setForm({
-                module: modules[0]?.id || '',
-                title: '',
-                content_type: 'article',
-                language: 'en',
-                content: '',
-                media_url: '',
-                image_url: '',
-                assessment_type: 'true_false',
-                assessment_payload: '',
-                order: lessons.length + 1
-            });
-        }
+        setSelectedLesson(null);
+        setForm({
+            module: modules[0]?.id || '',
+            title: '',
+            content_type: 'video',
+            language: 'en',
+            content: '',
+            media_url: '',
+            image_url: '',
+            assessment_type: 'true_false',
+            assessment_payload: '',
+            order: lessons.length + 1
+        });
         setIsModalOpen(true);
     };
 
-    const handleSubmit = async (ev: React.FormEvent) => {
-        ev.preventDefault();
+    const handleEdit = (lesson: Lesson) => {
+        setActionError('');
+        setSelectedLesson(lesson);
+        setForm({
+            module: lesson.module,
+            title: lesson.title,
+            content_type: lesson.content_type,
+            language: lesson.language || 'en',
+            content: lesson.content || '',
+            media_url: lesson.media_url || '',
+            image_url: lesson.image_url || '',
+            assessment_type: lesson.assessment_type || 'true_false',
+            assessment_payload: lesson.assessment_payload || '',
+            order: lesson.order
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleSubmit = async (ev?: React.FormEvent) => {
+        if (ev) ev.preventDefault();
         setActionError('');
         setIsActionLoading(true);
 
         const isEditing = !!selectedLesson;
+
+        // Payload Validation
+        if (form.content_type === 'assessment') {
+            try {
+                const payload = JSON.parse(form.assessment_payload);
+                if (!payload || typeof payload !== 'object' || !Array.isArray(payload.questions) || payload.questions.length === 0) {
+                    throw new Error('Payload must be a JSON object with a non-empty "questions" array.');
+                }
+                const validTypes = ['multiple_choice', 'true_false', 'matching'];
+                for (let i = 0; i < payload.questions.length; i++) {
+                    const q = payload.questions[i];
+                    if (!q.id || !q.type || !q.question || q.correct_answer === undefined) {
+                        throw new Error(`Question at index ${i} missing required fields (id, type, question, correct_answer).`);
+                    }
+                    if (!validTypes.includes(q.type)) {
+                        throw new Error(`Question at index ${i} has invalid type "${q.type}".`);
+                    }
+                    if (q.type === 'multiple_choice') {
+                        if (!Array.isArray(q.options) || q.options.length === 0) {
+                            throw new Error(`Multiple choice question at index ${i} must have an "options" array.`);
+                        }
+                        if (!q.options.find((opt: any) => opt.id === q.correct_answer)) {
+                            throw new Error(`Multiple choice question at index ${i} has a correct_answer that does not match any option id.`);
+                        }
+                    } else if (q.type === 'true_false') {
+                        if (typeof q.correct_answer !== 'boolean') {
+                            throw new Error(`True/False question at index ${i} must have a boolean correct_answer.`);
+                        }
+                    } else if (q.type === 'matching') {
+                        if (typeof q.correct_answer !== 'object' || Array.isArray(q.correct_answer)) {
+                            throw new Error(`Matching question at index ${i} must have an object for correct_answer.`);
+                        }
+                    }
+                }
+            } catch (err: any) {
+                setActionError(err.message || 'Invalid assessment payload JSON.');
+                setIsActionLoading(false);
+                return;
+            }
+        }
+
         const endpoint = `/api/v1/lessons/${isEditing ? `${selectedLesson.id}/` : ''}`;
 
         const { error: apiErr, status } = await apiFetch(endpoint, {
@@ -207,7 +252,9 @@ export default function AdminLessonsPage() {
                         <h1 className="text-3xl font-bold text-gray-900 mb-1">Lessons Management</h1>
                         <p className="text-gray-500">Create rich content including videos, articles, and assessments.</p>
                     </div>
-                    <Button variant="primary" onClick={() => openModal()}>Add Lesson</Button>
+                    {user?.role === 'course_provider' && (
+                        <Button variant="primary" onClick={handleAddNew}>Add Lesson</Button>
+                    )}
                 </div>
             </div>
 
@@ -334,9 +381,9 @@ export default function AdminLessonsPage() {
                                         <td className="px-6 py-4 text-gray-600 border-l border-gray-100 truncate max-w-[200px]">{getModuleName(l.module)}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold ${l.content_type === 'video' ? 'bg-blue-50 text-blue-600' :
-                                                    l.content_type === 'article' ? 'bg-green-50 text-green-600' :
-                                                        l.content_type === 'assessment' ? 'bg-purple-50 text-purple-600' :
-                                                            'bg-gray-50 text-gray-600'
+                                                l.content_type === 'article' ? 'bg-green-50 text-green-600' :
+                                                    l.content_type === 'assessment' ? 'bg-purple-50 text-purple-600' :
+                                                        'bg-gray-50 text-gray-600'
                                                 }`}>
                                                 {l.content_type}
                                             </span>
@@ -344,8 +391,12 @@ export default function AdminLessonsPage() {
                                         <td className="px-6 py-4 uppercase text-xs">{l.language}</td>
                                         <td className="px-6 py-4 text-center">{l.order}</td>
                                         <td className="px-6 py-4 text-right whitespace-nowrap">
-                                            <button onClick={() => openModal(l)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
-                                            <button onClick={() => handleDelete(l.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
+                                            {user?.role === 'course_provider' && (
+                                                <button onClick={() => handleEdit(l)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
+                                            )}
+                                            {user?.role === 'super_admin' && (
+                                                <button onClick={() => handleDelete(l.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -380,144 +431,159 @@ export default function AdminLessonsPage() {
                 </div>
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedLesson ? 'Edit Lesson' : 'Add Lesson'} maxWidth="2xl">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedLesson ? "Edit Lesson" : "Add New Lesson"} maxWidth="2xl">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
+                    {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-xs border border-red-100 mb-4">{actionError}</div>}
 
                     <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                            <Input
+                                label="Lesson Title"
+                                placeholder="e.g. Introduction to Cybersecurity"
+                                value={form.title}
+                                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                                required
+                            />
+                        </div>
+
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Parent Module</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Module</label>
                             <select
                                 className={SELECT_CLS}
                                 value={form.module}
-                                onChange={e => setForm({ ...form, module: e.target.value })}
-                                disabled={isActionLoading}
+                                onChange={(e) => setForm({ ...form, module: e.target.value })}
                                 required
                             >
-                                <option value="" disabled>Select a module</option>
+                                <option value="">Select Module</option>
                                 {modules.map(m => (
                                     <option key={m.id} value={m.id}>{m.title}</option>
                                 ))}
                             </select>
                         </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Language</label>
                             <select
                                 className={SELECT_CLS}
                                 value={form.language}
-                                onChange={e => setForm({ ...form, language: e.target.value })}
-                                disabled={isActionLoading}
+                                onChange={(e) => setForm({ ...form, language: e.target.value })}
                                 required
                             >
-                                <option value="en">English (en)</option>
-                                <option value="am">Amharic (am)</option>
-                                <option value="om">Oromo (om)</option>
-                                <option value="so">Somali (so)</option>
-                                <option value="ti">Tigrinya (ti)</option>
+                                <option value="en">English</option>
+                                <option value="am">Amharic</option>
+                                <option value="om">Oromo</option>
+                                <option value="so">Somali</option>
+                                <option value="ti">Tigrinya</option>
                             </select>
                         </div>
-                    </div>
 
-                    <Input
-                        label="Lesson Title"
-                        value={form.title}
-                        onChange={e => setForm({ ...form, title: e.target.value })}
-                        required
-                        disabled={isActionLoading}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Content Type</label>
                             <select
                                 className={SELECT_CLS}
                                 value={form.content_type}
-                                onChange={e => setForm({ ...form, content_type: e.target.value as any })}
-                                disabled={isActionLoading}
+                                onChange={(e) => setForm({ ...form, content_type: e.target.value as any })}
                                 required
                             >
-                                <option value="article">Article</option>
                                 <option value="video">Video</option>
+                                <option value="article">Article</option>
                                 <option value="image">Image</option>
                                 <option value="assessment">Assessment</option>
                             </select>
                         </div>
-                        <Input
-                            label="Order"
-                            type="number"
-                            value={form.order}
-                            onChange={e => setForm({ ...form, order: parseInt(e.target.value) || 0 })}
-                            required
-                            disabled={isActionLoading}
-                        />
+
+                        <div>
+                            <Input
+                                label="Order"
+                                type="number"
+                                value={form.order.toString()}
+                                onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) || 0 })}
+                                required
+                            />
+                        </div>
                     </div>
 
-                    {/* Conditional Fields */}
-                    {form.content_type === 'article' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Article Content</label>
-                            <textarea
-                                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[150px] resize-y"
-                                value={form.content}
-                                onChange={e => setForm({ ...form, content: e.target.value })}
-                                disabled={isActionLoading}
-                                placeholder="Write your article content here (Markdown supported)..."
-                            />
-                        </div>
-                    )}
+                    <div className="border-t border-gray-100 pt-4">
+                        {form.content_type === 'video' && (
+                            <div className="space-y-4">
+                                <label className="block text-sm font-semibold text-gray-700">Video Content</label>
+                                <CloudinaryUpload
+                                    onUploadSuccess={(url) => setForm({ ...form, media_url: url })}
+                                    folder="lessons/videos"
+                                    resourceType="video"
+                                />
+                                <Input
+                                    label="Or Video URL"
+                                    placeholder="https://..."
+                                    value={form.media_url}
+                                    onChange={(e) => setForm({ ...form, media_url: e.target.value })}
+                                />
+                            </div>
+                        )}
 
-                    {(form.content_type === 'video' || form.content_type === 'image') && (
-                        <div className="grid grid-cols-1 gap-4">
-                            <Input
-                                label={form.content_type === 'video' ? "Video URL" : "Image URL"}
-                                value={form.content_type === 'video' ? form.media_url : form.image_url}
-                                onChange={e => setForm({ ...form, [form.content_type === 'video' ? 'media_url' : 'image_url']: e.target.value })}
-                                disabled={isActionLoading}
-                                placeholder="https://..."
-                            />
-                            {form.content_type === 'video' && (
+                        {form.content_type === 'article' && (
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Article Content</label>
                                 <textarea
-                                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none min-h-[80px] resize-y"
+                                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary outline-none min-h-[200px]"
+                                    placeholder="Write your article content here..."
                                     value={form.content}
-                                    onChange={e => setForm({ ...form, content: e.target.value })}
-                                    disabled={isActionLoading}
-                                    placeholder="Video description (optional)..."
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    {form.content_type === 'assessment' && (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Assessment Type</label>
-                                <select
-                                    className={SELECT_CLS}
-                                    value={form.assessment_type}
-                                    onChange={e => setForm({ ...form, assessment_type: e.target.value as any })}
-                                    disabled={isActionLoading}
-                                >
-                                    <option value="true_false">True/False</option>
-                                    <option value="multiple_choice">Multiple Choice</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Assessment Payload (JSON)</label>
-                                <textarea
-                                    className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary outline-none min-h-[100px] resize-y"
-                                    value={form.assessment_payload}
-                                    onChange={e => setForm({ ...form, assessment_payload: e.target.value })}
-                                    disabled={isActionLoading}
-                                    placeholder='{ "question": "...", "options": [...] }'
+                                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                                    required
                                 />
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    <div className="pt-4 flex justify-end gap-3">
-                        <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isActionLoading}>Cancel</Button>
+                        {form.content_type === 'image' && (
+                            <div className="space-y-4">
+                                <label className="block text-sm font-semibold text-gray-700">Image</label>
+                                <CloudinaryUpload
+                                    onUploadSuccess={(url) => setForm({ ...form, image_url: url })}
+                                    folder="lessons/images"
+                                />
+                                <Input
+                                    label="Or Image URL"
+                                    placeholder="https://..."
+                                    value={form.image_url}
+                                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                                />
+                            </div>
+                        )}
+
+                        {form.content_type === 'assessment' && (
+                            <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Assessment Type</label>
+                                    <select
+                                        className={SELECT_CLS}
+                                        value={form.assessment_type}
+                                        onChange={(e) => setForm({ ...form, assessment_type: e.target.value as any })}
+                                        required
+                                    >
+                                        <option value="true_false">True / False</option>
+                                        <option value="multiple_choice">Multiple Choice</option>
+                                        <option value="matching">Matching</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Assessment JSON Payload</label>
+                                    <textarea
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 font-mono text-xs focus:ring-2 focus:ring-primary outline-none min-h-[150px]"
+                                        placeholder='{"questions": [...]}'
+                                        value={form.assessment_payload}
+                                        onChange={(e) => setForm({ ...form, assessment_payload: e.target.value })}
+                                        required
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">Note: Provide a valid JSON object matching the Assessment schema.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+                        <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
                         <Button type="submit" variant="primary" disabled={isActionLoading}>
-                            {isActionLoading ? 'Saving...' : selectedLesson ? 'Save Changes' : 'Create Lesson'}
+                            {isActionLoading ? (selectedLesson ? 'Updating...' : 'Creating...') : (selectedLesson ? 'Update Lesson' : 'Create Lesson')}
                         </Button>
                     </div>
                 </form>

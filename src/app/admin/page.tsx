@@ -68,15 +68,36 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         setIsDataLoading(true);
         try {
-            const [coursesRes, orgsRes, reqsRes, resourcesRes] = await Promise.all([
-                getCourses(), getOrganizations(), getTrainingRequests(), getResources()
-            ]);
+            const promises: Promise<any>[] = [
+                getCourses(),
+                getOrganizations(),
+                getTrainingRequests()
+            ];
+
+            // Only fetch resources if NOT an org_admin
+            if (user?.role !== 'org_admin') {
+                promises.push(getResources());
+            }
+
+            const results = await Promise.all(promises);
+            const coursesRes = results[0];
+            const orgsRes = results[1];
+            const reqsRes = results[2];
+            const resourcesRes = results[3]; // Might be undefined if org_admin
+
             setCoursesCount(coursesRes.data?.count?.toString() || '0');
             setOrgsCount(orgsRes.data?.count?.toString() || '0');
             setReqsCount(reqsRes.data?.count?.toString() || '0');
-            setResourcesCount(resourcesRes.data?.count?.toString() || '0');
+
+            if (resourcesRes) {
+                setResourcesCount(resourcesRes.data?.count?.toString() || '0');
+            }
+
             if (orgsRes.data?.results) setRecentOrgs(orgsRes.data.results.slice(0, 5));
-        } catch { /* ignore */ } finally { setIsDataLoading(false); }
+        } catch (err) {
+        } finally {
+            setIsDataLoading(false);
+        }
     };
 
     if (isLoading || isDataLoading) return (
@@ -112,6 +133,26 @@ export default function AdminDashboard() {
                 {/* ═══════════ SUPER ADMIN DASHBOARD ═══════════ */}
                 {user.role === 'super_admin' && (
                     <>
+                        {/* Pending Training Requests Alert */}
+                        {parseInt(reqsCount) > 0 && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-8 flex items-center justify-between shadow-sm">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-white text-orange-500 flex items-center justify-center shadow-sm">
+                                        ⏳
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900">Pending Training Requests</h3>
+                                        <p className="text-sm text-gray-600">There are {reqsCount} organization training requests awaiting your review.</p>
+                                    </div>
+                                </div>
+                                <Link href="/admin/training-requests">
+                                    <button className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+                                        Review Now
+                                    </button>
+                                </Link>
+                            </div>
+                        )}
+
                         {/* Stats */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                             <StatCard icon="📚" label="Total Courses" value={coursesCount} color="blue" />
@@ -199,21 +240,19 @@ export default function AdminDashboard() {
                 {user.role === 'org_admin' && (
                     <>
                         {/* Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                             <StatCard icon="👥" label="Members" value={orgsCount} color="blue" />
                             <StatCard icon="📚" label="Courses" value={coursesCount} color="green" />
                             <StatCard icon="⏳" label="Training Requests" value={reqsCount} color="yellow" />
-                            <StatCard icon="📄" label="Resources" value={resourcesCount} color="purple" />
                         </div>
 
                         {/* Quick Links */}
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Organization Management</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                             <QuickLink icon="👥" title="Members" description="Manage organization memberships and user enrollments." href="/admin/memberships" />
-                            <QuickLink icon="📋" title="Training Requests" description="Review and process training requests from your organization." href="/admin/training-requests" />
+                            <QuickLink icon="📋" title="Training Requests" description="Submit and track training requests for your organization." href="/admin/training-requests" />
                             <QuickLink icon="📊" title="Reports" description="View compliance and training progress reports." href="/admin/reports" />
                             <QuickLink icon="📖" title="Courses" description="Browse and manage available training courses." href="/admin/courses" />
-                            <QuickLink icon="📄" title="Resources" description="View and distribute cybersecurity awareness materials." href="/admin/resources" />
                             <QuickLink icon="📣" title="Campaigns" description="View and manage awareness campaigns for your org." href="/admin/campaigns" />
                         </div>
 
@@ -227,7 +266,6 @@ export default function AdminDashboard() {
                                 <div className="space-y-4">
                                     <ProgressBar label="Member Enrollment Rate" value="78%" pct={78} color="green" />
                                     <ProgressBar label="Course Completion Rate" value="62%" pct={62} color="blue" />
-                                    <ProgressBar label="Resource Utilization" value="85%" pct={85} color="purple" />
                                 </div>
                             </div>
                             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">

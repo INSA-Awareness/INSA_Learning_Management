@@ -65,7 +65,7 @@ export default function AdminResourcesPage() {
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) router.push('/login');
-            else if (user?.role !== 'super_admin' && user?.role !== 'org_admin' && user?.role !== 'course_provider') router.push('/dashboard');
+            else if (user?.role !== 'super_admin' && user?.role !== 'course_provider') router.push('/admin');
             else {
                 fetchResources();
                 fetchOrgs();
@@ -98,14 +98,11 @@ export default function AdminResourcesPage() {
             });
 
             const url = `/api/v1/resources/?${searchParams.toString()}`;
-            console.log('Fetching resources from:', url);
 
             const { data, error: e, status } = await apiFetch(url);
-            console.log('Fetch Results:', { status, data, error: e });
 
             if (e) {
                 setError(e);
-                console.error('Fetch error:', e);
             }
             else if (data?.results) {
                 setResources(data.results);
@@ -116,7 +113,6 @@ export default function AdminResourcesPage() {
                 setTotalCount(data.length);
             }
         } catch (err: any) {
-            console.error('Unexpected fetch error:', err);
             setError(err.message || 'An unexpected error occurred.');
         } finally {
             setIsFetching(false);
@@ -158,13 +154,11 @@ export default function AdminResourcesPage() {
             : await createResource(form);
 
         if (apiErr || (status !== 200 && status !== 201)) {
-            console.error('Resource Save Error:', { error: apiErr, status, data });
             const msg = apiErr || 'Failed to save resource.';
             setActionError(msg);
             toast.error(msg);
         }
         else {
-            console.log('Resource Save Success:', { status, data });
             toast.success(selectedResource ? 'Resource updated successfully!' : 'Resource created successfully!');
             fetchResources();
             setIsModalOpen(false);
@@ -209,7 +203,7 @@ export default function AdminResourcesPage() {
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-    if (!user || (user.role !== 'super_admin' && user.role !== 'org_admin' && user.role !== 'course_provider')) return null;
+    if (!user || (user.role !== 'super_admin' && user.role !== 'course_provider')) return null;
 
     const filteredResources = resources.filter(r => {
         const matchesOrg = selectedOrgs.length === 0 || selectedOrgs.includes(r.organization);

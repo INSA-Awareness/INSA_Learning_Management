@@ -15,6 +15,7 @@ interface Course {
     status?: string;
     provider?: string;
     created_at?: string;
+    thumbnail_url?: string;
 }
 
 export default function TrainingPage() {
@@ -43,6 +44,8 @@ export default function TrainingPage() {
     };
 
     let filteredCourses = courses.filter(course => {
+        // Only show published courses to learners
+        if (course.status && course.status !== 'published') return false;
         const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase());
         const itemLevel = (course.level || course.difficulty || '').toLowerCase();
         const matchesDiff = selectedDifficulty.length === 0 || selectedDifficulty.includes(itemLevel);
@@ -188,9 +191,15 @@ export default function TrainingPage() {
                                                 {course.level || course.difficulty}
                                             </div>
                                         )}
-                                        <div className="w-10 h-10 rounded-xl bg-primary/10 text-xl flex items-center justify-center mb-4 shrink-0 transition-transform group-hover:scale-110">
-                                            {icons[i % icons.length]}
-                                        </div>
+                                        {course.thumbnail_url ? (
+                                            <div className="w-full h-36 rounded-xl overflow-hidden mb-4 shrink-0">
+                                                <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-xl flex items-center justify-center mb-4 shrink-0 transition-transform group-hover:scale-110">
+                                                {icons[i % icons.length]}
+                                            </div>
+                                        )}
                                         <h4 className="font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors pr-16">{course.title}</h4>
                                         <p className="text-xs text-gray-500 mb-4 flex-1 line-clamp-3">
                                             {course.description || 'Explore this cybersecurity course and build your skills.'}
@@ -199,15 +208,9 @@ export default function TrainingPage() {
                                             {course.language && (
                                                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded font-medium uppercase">{course.language}</span>
                                             )}
-                                            {isAuthenticated ? (
-                                                <Link href={`/courses/${course.id}`} className="text-xs font-semibold text-primary hover:underline ml-auto">
-                                                    View Course →
-                                                </Link>
-                                            ) : (
-                                                <Link href="/login" className="text-xs font-semibold text-primary hover:underline ml-auto">
-                                                    Login to Enroll →
-                                                </Link>
-                                            )}
+                                            <Link href={`/courses/${course.id}`} className="text-xs font-semibold text-primary hover:underline ml-auto">
+                                                View Course →
+                                            </Link>
                                         </div>
                                     </div>
                                 );

@@ -4,14 +4,18 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { apiFetch, getCourses, enrollInCourse, Course } from '@/lib/api';
+import { apiFetch, enrollInCourse, getEnrollments, getCourses, getAlerts, createTrainingRequest, getTrainingRequests } from '@/lib/api';
+import { Button } from '@/components/Button';
+import { Modal } from '@/components/Modal';
+import { Input } from '@/components/Input';
+import { CloudinaryUpload } from '@/components/CloudinaryUpload';
 
 interface Enrollment {
     id: string;
     course: {
         id: string;
         title: string;
-        difficulty: string;
+        level?: string;
     };
     progress: number;
     last_accessed: string;
@@ -25,6 +29,15 @@ interface Alert {
     published_at: string;
 }
 
+interface Course {
+    id: string;
+    title: string;
+    description: string;
+    level: string;
+    status: string;
+    thumbnail_url?: string;
+}
+
 export default function DashboardPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
@@ -33,6 +46,12 @@ export default function DashboardPage() {
     const [isFetching, setIsFetching] = useState(true);
     const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([]);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+    const [myRequests, setMyRequests] = useState<any[]>([]);
+    const [requestFormData, setRequestFormData] = useState({
+        description: '',
+        attachment_url: ''
+    });
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -41,6 +60,7 @@ export default function DashboardPage() {
                 router.push('/login');
             } else {
                 fetchDashboardData();
+                fetchMyRequests();
                 const interval = setInterval(fetchDashboardData, 60000); // Poll every minute
                 return () => clearInterval(interval);
             }
@@ -52,7 +72,7 @@ export default function DashboardPage() {
         const [enrollRes, alertsRes, coursesRes] = await Promise.all([
             apiFetch('/api/v1/enrollments/'),
             apiFetch('/api/v1/alerts/?page_size=5'),
-            getCourses({ page_size: 6 })
+            apiFetch('/api/v1/courses/')
         ]);
 
         if (enrollRes.data?.results) setEnrollments(enrollRes.data.results);
@@ -61,15 +81,34 @@ export default function DashboardPage() {
         if (alertsRes.data?.results) setAlerts(alertsRes.data.results);
         else if (Array.isArray(alertsRes.data)) setAlerts(alertsRes.data);
 
-        if (coursesRes.data?.results) {
+        let availableCourses: any[] = [];
+        if (coursesRes.data?.results) availableCourses = coursesRes.data.results;
+        else if (Array.isArray(coursesRes.data)) availableCourses = coursesRes.data;
+
+        // Hydrate enrollments with full course data for real-time title/thumbnail
+        if (availableCourses.length > 0) {
+            setEnrollments(prev => prev.map(e => {
+                const cId = typeof e.course === 'object' ? e.course.id : e.course;
+                const fullCourse = availableCourses.find(c => c.id === cId);
+                return fullCourse ? { ...e, course: fullCourse } : e;
+            }));
+
             const enrolledCourseIds = new Set(
                 (enrollRes.data?.results || (Array.isArray(enrollRes.data) ? enrollRes.data : []))
                     .map((e: any) => typeof e.course === 'object' ? e.course.id : e.course)
             );
-            setRecommendedCourses(coursesRes.data.results.filter((c: Course) => !enrolledCourseIds.has(c.id)).slice(0, 2));
+            setRecommendedCourses(
+                availableCourses.filter((c: any) => !enrolledCourseIds.has(c.id) && c.status === 'published')
+            );
         }
 
         setIsFetching(false);
+    };
+
+    const fetchMyRequests = async () => {
+        const { data } = await getTrainingRequests();
+        if (data?.results) setMyRequests(data.results);
+        else if (Array.isArray(data)) setMyRequests(data);
     };
 
     const handleEnroll = async (courseId: string) => {
@@ -81,6 +120,28 @@ export default function DashboardPage() {
             setError(err || 'Failed to enroll. You might already be enrolled.');
         } else {
             fetchDashboardData(); // Refresh data
+        }
+        setActionLoading(null);
+    };
+
+    const handleRequestSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setActionLoading('request');
+
+        const payload: any = {
+            description: requestFormData.description,
+            organization: (user as any)?.organization_id || (user as any)?.organization,
+            attachment_url: requestFormData.attachment_url || ""
+        };
+
+        const { error: err, status, data } = await createTrainingRequest(payload) as any;
+
+        if (err || status !== 201) {
+            setError(err || (data ? JSON.stringify(data) : 'Failed to submit training request.'));
+        } else {
+            setIsRequestModalOpen(false);
+            setRequestFormData({ description: '', attachment_url: '' });
+            fetchMyRequests();
         }
         setActionLoading(null);
     };
@@ -104,7 +165,7 @@ export default function DashboardPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-primary mb-1">Welcome back, {user?.first_name || 'User'}.</h1>
                         <p className="text-gray-600">
-                            Your cyber resilience score is stable. There are <span className="font-bold text-orange-500">{alerts.length} new advisories</span> requiring your attention today.
+                            You have <span className="font-bold text-orange-500">{enrollments.filter(e => e.progress < 100).length} active training sessions</span>. Check latest advisories below.
                         </p>
                     </div>
                     <button className="bg-white border border-green-200 text-green-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 hover:bg-green-50 transition-colors shadow-sm relative overflow-hidden group">
@@ -164,25 +225,38 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Stats Row */}
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-bold text-gray-900">Resuming Courses</h2>
+                            <Link href="/courses/enrolled" className="text-xs font-bold text-primary hover:underline">See all enrolled &rarr;</Link>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {enrollments.slice(0, 2).map((enrollment, idx) => (
-                                <Link key={enrollment.id} href={`/courses/${enrollment.course.id}`} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group flex gap-4 cursor-pointer relative overflow-hidden">
-                                    <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-red-50 transition-all">
-                                        {idx === 0 ? '🔒' : '📱'}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-gray-900 group-hover:text-primary transition-colors">{enrollment.course.title}</h4>
-                                        <p className="text-xs text-gray-500 mb-2">Progress • {enrollment.progress}% completed</p>
-                                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                                            <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${enrollment.progress}%` }}></div>
+                            {enrollments.slice(0, 2).map((enrollment: any, idx) => {
+                                const courseId = typeof enrollment.course === 'object' ? enrollment.course.id : enrollment.course;
+                                const resumeUrl = `/courses/${courseId}`;
+
+                                return (
+                                    <Link key={enrollment.id} href={resumeUrl} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md hover:border-primary/30 transition-all group flex gap-4 cursor-pointer relative overflow-hidden">
+                                        <div className="w-16 h-16 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 group-hover:bg-red-50 transition-all overflow-hidden border border-gray-50">
+                                            {enrollment.course?.thumbnail_url ? (
+                                                <img src={enrollment.course.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span>{idx === 0 ? '📁' : '📖'}</span>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mt-2">
-                                            <span>{enrollment.progress}% COMPLETED</span>
-                                            <span className="text-primary group-hover:underline cursor-pointer">RESUME &rarr;</span>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-gray-900 group-hover:text-primary transition-colors line-clamp-1">{typeof enrollment.course === 'object' ? enrollment.course.title : 'Researching Course...'}</h4>
+                                            <p className="text-xs text-gray-500 mb-2">Progress • {enrollment.progress}% completed</p>
+                                            <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1 overflow-hidden">
+                                                <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${enrollment.progress}%` }}></div>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 mt-2">
+                                                <span>{enrollment.progress}% COMPLETED</span>
+                                                <span className="text-primary group-hover:underline cursor-pointer">RESUME &rarr;</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                );
+                            })}
                             {enrollments.length === 0 && !isFetching && (
                                 <div className="md:col-span-2 bg-white rounded-2xl p-8 border border-dashed border-gray-200 text-center">
                                     <p className="text-gray-500 mb-4">You are not enrolled in any courses yet.</p>
@@ -196,22 +270,31 @@ export default function DashboardPage() {
                         {/* Recommended Courses */}
                         <div>
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg font-bold text-primary">Recommended Courses</h2>
-                                <Link href="/courses" className="text-xs font-semibold text-gray-500 hover:text-primary flex items-center gap-1">View catalog &rarr;</Link>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-bold text-gray-900 border-l-4 border-orange-500 pl-3">Top Recommendations</h2>
+                                    <span className="text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded font-bold">{recommendedCourses.length}</span>
+                                </div>
+                                <Link href="/courses" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">View full catalog &rarr;</Link>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {recommendedCourses.map((course) => (
                                     <div key={course.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
                                         <div className="h-32 bg-secondary relative overflow-hidden border-b border-gray-800 flex items-center justify-center">
-                                            <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0MCcgaGVpZ2h0PSc0MCc+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSdncmFkMScgeDE9JzAlJyB5MT0nMCUnIHgyPScxMDAlJyB5Mj0nMCUnPjxzdG9wIG9mZnNldD0nMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiNmZmY7c3RvcC1vcGFjaXR5OjEuMCcgLz48c3RvcCBvZmZzZXQ9JzEwMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiMwMDA7c3RvcC1vcGFjaXR5OjEuMCcgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0nNDAnJyBoZWlnaHQ9JzQwJScgZmlsbD0ndXJsKCNncmFkMSknIGZpbGwtb3BhY2l0eT0nMC4xJy8+PC9zdmc+')] mix-blend-overlay"></div>
-                                            <div className="w-24 h-24 border-[8px] border-blue-500/80 rounded-full border-t-transparent animate-spin-slow"></div>
+                                            {course.thumbnail_url ? (
+                                                <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <>
+                                                    <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc0MCcgaGVpZ2h0PSc0MCc+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSdncmFkMScgeDE9JzAlJyB5MT0nMCUnIHgyPScxMDAlJyB5Mj0nMCUnPjxzdG9wIG9mZnNldD0nMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiNmZmY7c3RvcC1vcGFjaXR5OjEuMCcgLz48c3RvcCBvZmZzZXQ9JzEwMCUnIHN0eWxlPSdzdG9wLWNvbG9yOiMwMDA7c3RvcC1vcGFjaXR5OjEuMCcgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0nNDAnJyBoZWlnaHQ9JzQwJScgZmlsbD0ndXJsKCNncmFkMSknIGZpbGwtb3BhY2l0eT0nMC4xJy8+PC9zdmc+')] mix-blend-overlay"></div>
+                                                    <div className="w-24 h-24 border-[8px] border-blue-500/80 rounded-full border-t-transparent animate-spin-slow"></div>
+                                                </>
+                                            )}
 
                                             <div className="absolute bottom-3 left-3 flex gap-2">
                                                 <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">NEW</span>
-                                                <span className={`text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm ${course.difficulty === 'beginner' ? 'bg-green-500/50' : course.difficulty === 'medium' ? 'bg-yellow-500/50' : 'bg-red-500/50'
+                                                <span className={`text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm ${(course as any).level === 'beginner' ? 'bg-green-500/50' : (course as any).level === 'medium' ? 'bg-yellow-500/50' : 'bg-red-500/50'
                                                     }`}>
-                                                    {course.difficulty}
+                                                    {(course as any).level || 'beginner'}
                                                 </span>
                                             </div>
                                         </div>
@@ -267,18 +350,43 @@ export default function DashboardPage() {
                                     <div className="text-gray-300 group-hover:text-primary">&#11162;</div>
                                 </Link>
 
-                                <div className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group">
-                                    <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0 font-bold">
-                                        ID
+                                <div className="bg-white border text-left border-gray-100 p-4 rounded-xl flex items-center gap-4 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all group w-full" onClick={() => setIsRequestModalOpen(true)}>
+                                    <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-colors shrink-0 font-bold">
+                                        &#43;
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-gray-900 text-sm">GovID Scanner</h4>
-                                        <p className="text-xs text-gray-500">Verify official links.</p>
+                                        <h4 className="font-bold text-gray-900 text-sm">Request Training</h4>
+                                        <p className="text-xs text-gray-500">Need specific content?</p>
                                     </div>
                                     <div className="text-gray-300 group-hover:text-primary">&#11162;</div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Recent Requests Status */}
+                        {myRequests.length > 0 && (
+                            <div>
+                                <h2 className="text-sm font-bold text-primary tracking-wider uppercase mb-4">My Requests</h2>
+                                <div className="space-y-3">
+                                    {myRequests.slice(0, 3).map(req => (
+                                        <div key={req.id} className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[120px]">
+                                                    {req.description}
+                                                </span>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${req.status === 'approved' ? 'bg-green-50 text-green-600' :
+                                                    req.status === 'rejected' ? 'bg-red-50 text-red-600' :
+                                                        'bg-yellow-50 text-yellow-600'
+                                                    }`}>
+                                                    {req.status || 'pending'}
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400">{new Date(req.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Latest Intelligence */}
                         <div>
@@ -320,6 +428,48 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <Modal
+                isOpen={isRequestModalOpen}
+                onClose={() => setIsRequestModalOpen(false)}
+                title="Request Custom Training"
+            >
+                <form onSubmit={handleRequestSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Training Description
+                        </label>
+                        <textarea
+                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200 min-h-[120px]"
+                            placeholder="Describe the training requirements for your organization..."
+                            value={requestFormData.description}
+                            onChange={(e) => setRequestFormData({ ...requestFormData, description: e.target.value })}
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Supporting Document (Optional PDF)
+                        </label>
+                        <CloudinaryUpload
+                            onUploadSuccess={(url) => setRequestFormData({ ...requestFormData, attachment_url: url })}
+                        />
+                        {requestFormData.attachment_url && (
+                            <p className="text-[10px] text-green-600 font-medium font-bold">File uploaded successfully ✓</p>
+                        )}
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-3">
+                        <Button type="button" variant="outline" onClick={() => setIsRequestModalOpen(false)} disabled={actionLoading === 'request'}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" variant="primary" disabled={actionLoading === 'request'}>
+                            {actionLoading === 'request' ? 'Submitting...' : 'Submit Request'}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

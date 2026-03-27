@@ -17,11 +17,38 @@ export default function CampaignsPage() {
 
     const fetchCampaigns = async () => {
         setIsLoading(true);
-        const { data, error: e } = await getCampaigns({ status: 'active' });
-        if (e) setError(e);
-        else if (data?.results) setCampaigns(data.results);
-        else if (Array.isArray(data)) setCampaigns(data as any);
-        setIsLoading(false);
+        setError('');
+
+        try {
+            // Aligning parameters with Admin logic to ensure consistent backend behavior
+            const { data, error: e } = await getCampaigns({
+                page: '1',
+                page_size: '100',
+                ordering: '-start_date'
+            });
+
+            if (e) {
+                setError(e);
+                setIsLoading(false);
+                return;
+            }
+
+            const allResults = data?.results || (Array.isArray(data) ? data : []);
+            // Filter for live and scheduled on the client side
+            const filtered = (allResults as Campaign[]).filter(c =>
+                c.status === 'live' || c.status === 'scheduled'
+            );
+
+            // Sort by start date (closest first)
+            filtered.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+            setCampaigns(filtered);
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to fetch campaigns');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -63,7 +90,10 @@ export default function CampaignsPage() {
                                         <div className="w-full h-full bg-gradient-to-br from-secondary to-gray-900 opacity-80"></div>
                                     )}
                                     <div className="absolute top-4 right-4">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${camp.status === 'active' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${camp.status === 'live' ? 'bg-green-500 text-white' :
+                                            camp.status === 'scheduled' ? 'bg-blue-500 text-white' :
+                                                'bg-gray-500 text-white'
+                                            }`}>
                                             {camp.status}
                                         </span>
                                     </div>

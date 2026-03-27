@@ -6,30 +6,31 @@ export default function Home() {
   return (
     <div className="w-full flex-col flex bg-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden w-full px-6 py-24 sm:py-32 lg:px-8 text-center flex flex-col items-center">
-        {/* Decorative background blobs */}
-        <div className="absolute top-0 left-1/4 -z-10 w-96 h-96 bg-red-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-        <div className="absolute -top-10 right-1/4 -z-10 w-96 h-96 bg-orange-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+      <section className="relative overflow-hidden w-full px-6 py-24 sm:py-32 lg:px-8 text-center flex flex-col items-center"
+        style={{ backgroundImage: "url('/background.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
+        {/* Dark overlay for text legibility */}
+        <div className="absolute inset-0 bg-black/60 z-0" />
 
-        <span className="text-primary text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2">
+        <span className="relative z-10 text-primary text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
           Official Government Portal
         </span>
 
-        <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl max-w-3xl">
+        <h1 className="relative z-10 mt-2 text-4xl font-extrabold tracking-tight text-white sm:text-6xl max-w-3xl">
           Building a <span className="text-primary">Cyber Resilient</span> Nation
         </h1>
 
-        <p className="mt-6 text-lg leading-8 text-gray-600 max-w-2xl">
+        <p className="relative z-10 mt-6 text-lg leading-8 text-gray-300 max-w-2xl">
           The official government platform empowering citizens, businesses, and institutions with knowledge to defend against cyber threats.
         </p>
 
-        <div className="mt-10 flex items-center justify-center gap-x-4">
+        <div className="relative z-10 mt-10 flex items-center justify-center gap-x-4">
           <Link href="/courses"><Button variant="primary" size="lg">Explore Courses &rarr;</Button></Link>
-          <Link href="/login"><Button variant="outline" size="lg" className="border-gray-300 text-gray-700">Sign In</Button></Link>
+          <Link href="/login"><Button variant="outline" size="lg" className="border-gray-300 text-white hover:bg-white/10">Sign In</Button></Link>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-100 flex flex-wrap justify-center gap-x-12 gap-y-4 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+        <div className="relative z-10 mt-16 pt-8 border-t border-white/20 flex flex-wrap justify-center gap-x-12 gap-y-4 text-xs font-semibold text-gray-300 uppercase tracking-widest">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 text-primary">&#9733;</span> Citizen Resource Hub
           </div>

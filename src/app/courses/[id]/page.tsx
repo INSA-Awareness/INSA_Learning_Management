@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getCertificateExams, CertificateExam, Enrollment } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/Button';
 
@@ -21,6 +21,9 @@ export default function CourseDetailPage() {
     const [isEnrolling, setIsEnrolling] = useState(false);
     const [enrollSuccess, setEnrollSuccess] = useState('');
     const [enrollError, setEnrollError] = useState('');
+    const [isEnrolled, setIsEnrolled] = useState(false);
+    const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+    const [certificateExam, setCertificateExam] = useState<CertificateExam | null>(null);
 
     useEffect(() => {
         if (id) fetchCourseData();
@@ -28,15 +31,43 @@ export default function CourseDetailPage() {
 
     const fetchCourseData = async () => {
         setIsLoading(true);
-        const [courseRes, modulesRes] = await Promise.all([
+        const [courseRes, enrollRes] = await Promise.all([
             apiFetch(`/api/v1/courses/${id}/`),
-            apiFetch(`/api/v1/modules/?course=${id}`)
+            isAuthenticated ? apiFetch('/api/v1/enrollments/') : Promise.resolve({ data: null })
         ]);
-        if (courseRes.error) setError(courseRes.error);
-        else if (courseRes.data) setCourse(courseRes.data);
-        if (modulesRes.data?.results) setModules(modulesRes.data.results);
-        else if (Array.isArray(modulesRes.data)) setModules(modulesRes.data);
+
+        // Try to fetch cert exam (only works for admin/provider roles; silently ignored for learners)
+        getCertificateExams({ course: id }).then(examRes => {
+            const results = (examRes.data as any)?.results ?? [];
+            if (Array.isArray(results) && results.length > 0) setCertificateExam(results[0]);
+        }).catch(() => { });
+
+
+        if (courseRes.error) {
+            setError(courseRes.error);
+        } else if (courseRes.data) {
+            setCourse(courseRes.data);
+            if (Array.isArray(courseRes.data.modules)) {
+                setModules(courseRes.data.modules);
+            }
+        }
+
+        if (enrollRes.data) {
+            const results = enrollRes.data.results || (Array.isArray(enrollRes.data) ? enrollRes.data : []);
+            const foundEnrollment = results.find((e: any) => {
+                const cId = typeof e.course === 'object' ? e.course.id : e.course;
+                return cId === id;
+            });
+            setIsEnrolled(!!foundEnrollment);
+            setEnrollment(foundEnrollment || null);
+        }
+
         setIsLoading(false);
+    };
+
+    const handleDownloadCertificate = async () => {
+        if (!enrollment) return;
+        window.open(`/api/v1/enrollments/${enrollment.id}/certificate/`, '_blank');
     };
 
     const handleEnroll = async () => {
@@ -104,13 +135,30 @@ export default function CourseDetailPage() {
                             <h1 className="text-3xl font-extrabold text-gray-900">{course.title}</h1>
                             {course.description && <p className="mt-3 text-gray-600 leading-relaxed">{course.description}</p>}
                         </div>
-                        <div className="shrink-0 w-48">
-                            {enrollSuccess ? (
-                                <div className="bg-green-50 text-green-700 border border-green-100 rounded-xl p-4 text-sm text-center font-medium">{enrollSuccess}</div>
+                        <div className="shrink-0 w-64 space-y-3">
+                            {enrollSuccess || isEnrolled ? (
+                                <>
+                                    <div className="bg-green-50 text-green-700 border border-green-100 rounded-xl p-4 text-sm text-center font-medium">
+                                        {enrollSuccess || 'You are enrolled in this course ✅'}
+                                    </div>
+
+                                    {/* Always visible for enrolled learners — discovery page handles exam lookup */}
+                                    <Link href={`/courses/${id}/exam`}>
+                                        <Button variant="primary" className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 border-indigo-600">
+                                            🎓 Take Certificate Exam
+                                        </Button>
+                                    </Link>
+
+                                    {enrollment?.status === 'completed' && (
+                                        <Button variant="outline" onClick={handleDownloadCertificate} className="w-full mt-2 border-green-200 text-green-700 hover:bg-green-50">
+                                            🏆 Download Certificate
+                                        </Button>
+                                    )}
+                                </>
                             ) : (
                                 <>
                                     {enrollError && <p className="text-xs text-red-600 mb-2">{enrollError}</p>}
-                                    <Button variant="primary" disabled={isEnrolling} onClick={handleEnroll} className="w-full">
+                                    <Button variant="primary" disabled={isEnrolling} onClick={handleEnroll} className="w-full py-4 text-lg shadow-lg shadow-primary/20">
                                         {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
                                     </Button>
                                 </>
@@ -128,9 +176,12 @@ export default function CourseDetailPage() {
                 </h2>
 
                 {modules.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-                        <div className="text-4xl mb-3">📚</div>
-                        <p className="text-gray-500">No modules added to this course yet.</p>
+                    <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
+                        <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-6 text-4xl grayscale filter">📚</div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">No Modules Available</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
+                            This course currently doesn't have any modules. Our training team is working on the content. Please check back soon!
+                        </p>
                     </div>
                 ) : (
                     <div className="space-y-3">

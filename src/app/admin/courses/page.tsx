@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getCourses, createCourse, updateCourse, deleteCourse, getOrganizations, getCertificateExams, createCertificateExam, updateCertificateExam, CertificateExam, Question } from '@/lib/api';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Modal } from '@/components/Modal';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { CloudinaryUpload } from '@/components/CloudinaryUpload';
+import { QuestionBuilder } from '@/components/QuestionBuilder';
 
 interface Course {
     id: string;
@@ -19,6 +21,7 @@ interface Course {
     status?: string;
     language?: string;
     is_active?: boolean;
+    thumbnail_url?: string;
 }
 
 interface OrgOption { id: string; name: string; }
@@ -28,13 +31,14 @@ interface CoursePayload {
     description: string;
     level: string;
     language: string;
-    status: string;
+    status: 'draft' | 'published' | 'archived';
     is_active: boolean;
     course_provider?: string;
     organization?: string;
+    thumbnail_url?: string;
 }
 
-const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white";
+const SELECT_CLS = "block w-full rounded-md border border-gray-300 py-2.5 px-3 text-sm text-gray-900 shadow-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none bg-white disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed";
 
 export default function AdminCoursesPage() {
     const { user, isAuthenticated, isLoading } = useAuth();
@@ -56,7 +60,8 @@ export default function AdminCoursesPage() {
         language: 'en',
         level: 'beginner',
         status: 'draft',
-        is_active: true
+        is_active: true,
+        thumbnail_url: ''
     });
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -68,7 +73,7 @@ export default function AdminCoursesPage() {
 
     const fetchCourses = React.useCallback(async () => {
         setIsFetching(true); setError('');
-        const { data, error: e } = await apiFetch('/api/v1/courses/');
+        const { data, error: e } = await getCourses();
         if (e) setError(e);
         else if (data?.results) setCourses(data.results);
         else if (Array.isArray(data)) setCourses(data);
@@ -76,7 +81,7 @@ export default function AdminCoursesPage() {
     }, []);
 
     const fetchOrgs = React.useCallback(async () => {
-        const { data } = await apiFetch('/api/v1/organizations/');
+        const { data } = await getOrganizations();
         if (data?.results) setOrgs(data.results);
         else if (Array.isArray(data)) setOrgs(data);
     }, []);
@@ -115,7 +120,8 @@ export default function AdminCoursesPage() {
                 language: course.language || 'en',
                 level: course.level || 'beginner',
                 status: course.status || 'draft',
-                is_active: course.is_active !== false
+                is_active: course.is_active !== false,
+                thumbnail_url: course.thumbnail_url || ''
             });
         }
         else {
@@ -128,7 +134,8 @@ export default function AdminCoursesPage() {
                 language: 'en',
                 level: 'beginner',
                 status: 'draft',
-                is_active: true
+                is_active: true,
+                thumbnail_url: ''
             });
         }
         setIsModalOpen(true);
@@ -137,7 +144,6 @@ export default function AdminCoursesPage() {
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault(); setActionError(''); setIsActionLoading(true);
         const isEditing = !!selectedCourse;
-        const endpoint = `/api/v1/courses/${isEditing ? `${selectedCourse!.id}/` : ''}`;
 
         // Build the payload to match the API schema
         const payload: CoursePayload = {
@@ -145,8 +151,9 @@ export default function AdminCoursesPage() {
             description: form.description,
             level: form.level,
             language: form.language,
-            status: form.status,
+            status: form.status as 'draft' | 'published' | 'archived',
             is_active: form.is_active,
+            ...(form.thumbnail_url ? { thumbnail_url: form.thumbnail_url } : {}),
         };
 
         // Set course_provider and organization
@@ -161,8 +168,14 @@ export default function AdminCoursesPage() {
             payload.organization = form.organization;
         }
 
-        const { error: apiErr, status } = await apiFetch(endpoint, { method: isEditing ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-        if (apiErr || (status !== 200 && status !== 201)) { setActionError(apiErr || 'Failed to save course.'); }
+        let res;
+        if (isEditing) {
+            res = await updateCourse(selectedCourse!.id, payload);
+        } else {
+            res = await createCourse(payload);
+        }
+
+        if (res.error) { setActionError(res.error || 'Failed to save course.'); }
         else { fetchCourses(); setIsModalOpen(false); }
         setIsActionLoading(false);
     };
@@ -174,24 +187,25 @@ export default function AdminCoursesPage() {
 
     const handleStatusUpdate = async (id: string, newStatus: string) => {
         setIsActionLoading(true);
-        const { error: apiErr } = await apiFetch(`/api/v1/courses/${id}/`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: newStatus })
-        });
+        const { error: apiErr } = await updateCourse(id, { status: newStatus as any });
         if (apiErr) setActionError(apiErr);
         else fetchCourses();
         setIsActionLoading(false);
     };
 
-    const confirmDelete = async () => {
+    const handleDeleteConfirm = async () => {
         if (!itemToDelete) return;
         setIsActionLoading(true);
-        const { error: e, status } = await apiFetch(`/api/v1/courses/${itemToDelete}/`, { method: 'DELETE' });
-        if (e || status !== 204) setError(e || 'Failed to delete.');
+        const { error: err } = await deleteCourse(itemToDelete);
+        if (err) setError(err);
         else fetchCourses();
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
         setIsActionLoading(false);
+    };
+
+    const handleOpenExamModal = (course: any) => {
+        router.push(`/admin/assessments?course=${course.id}`);
     };
 
     if (isLoading || isFetching) return <div className="flex justify-center items-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
@@ -205,6 +219,8 @@ export default function AdminCoursesPage() {
     });
 
     const canPublish = user.role === 'super_admin';
+    const isEditing = !!selectedCourse;
+    const isSuperAdminEditing = isEditing && user.role === 'super_admin';
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
@@ -307,7 +323,16 @@ export default function AdminCoursesPage() {
                                     <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No courses found matching your criteria.</td></tr>
                                 ) : filteredCourses.map(c => (
                                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-gray-900">{c.title}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">
+                                            <div className="flex items-center gap-3">
+                                                {c.thumbnail_url ? (
+                                                    <img src={c.thumbnail_url} alt={c.title} className="w-10 h-10 rounded-lg object-cover border border-gray-100 shrink-0" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs shrink-0">📚</div>
+                                                )}
+                                                <span>{c.title}</span>
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4 capitalize">{c.level || '—'}</td>
                                         <td className="px-6 py-4 uppercase text-xs">{c.language || '—'}</td>
                                         <td className="px-6 py-4">
@@ -327,6 +352,7 @@ export default function AdminCoursesPage() {
                                                 <button onClick={() => handleStatusUpdate(c.id, 'published')} className="text-green-600 hover:text-green-800 font-medium mr-3 transition-colors">Approve</button>
                                             )}
                                             <button onClick={() => openModal(c)} className="text-secondary hover:text-primary font-medium mr-3 transition-colors">Edit</button>
+                                            <button onClick={() => handleOpenExamModal(c)} className="text-primary hover:text-primary-hover font-medium mr-3 transition-colors">Exam</button>
                                             <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:text-red-700 font-medium transition-colors">Delete</button>
                                         </td>
                                     </tr>
@@ -339,14 +365,27 @@ export default function AdminCoursesPage() {
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedCourse ? 'Edit Course' : 'Add Course'}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {actionError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">{actionError}</div>}
-                    <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading} />
+                    <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required disabled={isActionLoading || isSuperAdminEditing} />
+                    <CloudinaryUpload
+                        label="Course Thumbnail"
+                        folder="lms-course-thumbnails"
+                        resourceType="image"
+                        value={form.thumbnail_url || ''}
+                        onUploadSuccess={(url) => setForm({ ...form, thumbnail_url: url })}
+                        disabled={isActionLoading || isSuperAdminEditing}
+                    />
+                    {form.thumbnail_url && (
+                        <div className="rounded-xl overflow-hidden border border-gray-200 h-32">
+                            <img src={form.thumbnail_url} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                        </div>
+                    )}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px] resize-y" placeholder="Enter course description..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading} />
+                        <textarea className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px] resize-y disabled:bg-gray-100 disabled:opacity-75 disabled:cursor-not-allowed" placeholder="Enter course description..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isActionLoading || isSuperAdminEditing} />
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Organization {user?.role === 'super_admin' && <span className="text-red-500">*</span>}</label>
-                        <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} disabled={isActionLoading} required={user?.role === 'super_admin'}>
+                        <select className={SELECT_CLS} value={form.organization} onChange={e => setForm({ ...form, organization: e.target.value })} disabled={isActionLoading || isSuperAdminEditing} required={user?.role === 'super_admin' && !isSuperAdminEditing}>
                             <option value="">Select Organization {user?.role === 'super_admin' ? '(Required)' : '(optional)'}</option>
                             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                         </select>
@@ -354,7 +393,7 @@ export default function AdminCoursesPage() {
                     {user?.role === 'super_admin' && (
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Provider <span className="text-red-500">*</span></label>
-                            <select className={SELECT_CLS} value={form.course_provider} onChange={e => setForm({ ...form, course_provider: e.target.value })} disabled={isActionLoading} required>
+                            <select className={SELECT_CLS} value={form.course_provider} onChange={e => setForm({ ...form, course_provider: e.target.value })} disabled={isActionLoading || isSuperAdminEditing} required>
                                 <option value="">Select Course Provider (User)</option>
                                 {providers.map(p => (
                                     <option key={p.id} value={p.id}>{p.first_name} {p.last_name} ({p.email})</option>
@@ -366,7 +405,7 @@ export default function AdminCoursesPage() {
                     <div className="grid grid-cols-3 gap-3">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Language</label>
-                            <select className={SELECT_CLS} value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} disabled={isActionLoading}>
+                            <select className={SELECT_CLS} value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} disabled={isActionLoading || isSuperAdminEditing}>
                                 <option value="en">English (en)</option>
                                 <option value="am">Amharic (am)</option>
                                 <option value="om">Oromo (om)</option>
@@ -376,7 +415,7 @@ export default function AdminCoursesPage() {
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Level</label>
-                            <select className={SELECT_CLS} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} disabled={isActionLoading}>
+                            <select className={SELECT_CLS} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} disabled={isActionLoading || isSuperAdminEditing}>
                                 <option value="beginner">Beginner</option>
                                 <option value="medium">Medium</option>
                                 <option value="advanced">Advanced</option>
@@ -402,7 +441,7 @@ export default function AdminCoursesPage() {
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={confirmDelete}
+                onConfirm={handleDeleteConfirm}
                 title="Delete Course"
                 message="Are you sure you want to delete this course? This action cannot be undone."
                 confirmText="Delete"

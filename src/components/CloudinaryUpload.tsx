@@ -9,6 +9,7 @@ interface CloudinaryUploadProps {
     resourceType?: 'auto' | 'image' | 'video' | 'raw';
     className?: string;
     value?: string;
+    disabled?: boolean;
 }
 
 export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({
@@ -17,7 +18,8 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({
     folder = 'lms-uploads',
     resourceType = 'auto',
     className = '',
-    value = ''
+    value = '',
+    disabled = false
 }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -85,12 +87,12 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({
 
             <div className="relative">
                 <div
-                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    onClick={() => !isUploading && !disabled && fileInputRef.current?.click()}
                     className={`
-                        w-full px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer
+                        w-full px-4 py-3 border-2 border-dashed rounded-xl ${!disabled && !isUploading ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
                         transition-all duration-200 flex items-center justify-between
-                        ${isUploading ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300 hover:border-primary hover:bg-primary/5'}
-                        ${value && !isUploading ? 'border-green-300 bg-green-50/30' : ''}
+                        ${isUploading ? 'bg-gray-50 border-gray-200' : disabled ? 'bg-gray-100 border-gray-300' : 'bg-white border-gray-300 hover:border-primary hover:bg-primary/5'}
+                        ${value && !isUploading && !disabled ? 'border-green-300 bg-green-50/30' : ''}
                     `}
                 >
                     <div className="flex-1 min-w-0 mr-4">
@@ -109,7 +111,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({
                         )}
                     </div>
 
-                    {!isUploading && (
+                    {!isUploading && !disabled && (
                         <button
                             type="button"
                             className="text-xs font-semibold text-primary uppercase tracking-wider"
@@ -129,7 +131,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({
                 type="file"
                 className="hidden"
                 onChange={handleFileChange}
-                disabled={isUploading}
+                disabled={isUploading || disabled}
                 accept={resourceType === 'video' ? 'video/*' : resourceType === 'image' ? 'image/*' : '*'}
             />
 

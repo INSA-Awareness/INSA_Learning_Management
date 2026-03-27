@@ -3,33 +3,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, Module, Lesson } from '@/lib/api';
 import { Button } from '@/components/Button';
 
-interface Article {
-    id: string;
-    content: string;
-    order: number;
-}
+import { AssessmentViewer } from '@/components/AssessmentViewer';
 
-interface Module {
-    id: string;
-    title: string;
-    description?: string;
-}
-
-interface Assessment {
-    id: string;
-    title: string;
-}
+// Using imported Module and Lesson interfaces from lib/api
 
 export default function ModuleContentPage() {
     const { id: courseId, moduleId } = useParams<{ id: string; moduleId: string }>();
     const router = useRouter();
 
     const [module, setModule] = useState<Module | null>(null);
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [assessment, setAssessment] = useState<Assessment | null>(null);
+    const [lessons, setLessons] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -39,21 +25,35 @@ export default function ModuleContentPage() {
 
     const fetchModuleData = async () => {
         setIsLoading(true);
-        const [moduleRes, articlesRes, assessmentsRes] = await Promise.all([
-            apiFetch(`/api/v1/modules/${moduleId}/`),
-            apiFetch(`/api/v1/articles/?module=${moduleId}`),
-            apiFetch(`/api/v1/assessments/?module=${moduleId}`)
-        ]);
+        setError('');
 
-        if (moduleRes.error) setError(moduleRes.error);
-        else if (moduleRes.data) setModule(moduleRes.data);
+        // Fetch the full course detail because learners might be blocked from direct module/lesson listing
+        // but are allowed to see the course they are enrolled in.
+        const courseRes = await apiFetch<any>(`/api/v1/courses/${courseId}/`);
 
-        if (articlesRes.data?.results) setArticles(articlesRes.data.results);
-        else if (Array.isArray(articlesRes.data)) setArticles(articlesRes.data);
+        if (courseRes.error) {
+            setError(courseRes.error);
+            setIsLoading(false);
+            return;
+        }
 
-        if (assessmentsRes.data?.results?.[0]) setAssessment(assessmentsRes.data.results[0]);
-        else if (Array.isArray(assessmentsRes.data) && assessmentsRes.data[0]) setAssessment(assessmentsRes.data[0]);
-
+        if (courseRes.data && Array.isArray(courseRes.data.modules)) {
+            const foundModule = courseRes.data.modules.find((m: any) => m.id === moduleId);
+            if (foundModule) {
+                setModule(foundModule);
+                // If lessons are nested in the module object, use them
+                if (Array.isArray(foundModule.lessons)) {
+                    setLessons(foundModule.lessons);
+                } else {
+                    // Final fallback: try to fetch lessons separately
+                    const lessonsRes = await apiFetch<any>(`/api/v1/lessons/?module=${moduleId}&ordering=order`);
+                    if (lessonsRes.data?.results) setLessons(lessonsRes.data.results);
+                    else if (Array.isArray(lessonsRes.data)) setLessons(lessonsRes.data);
+                }
+            } else {
+                setError('Module not found in this course.');
+            }
+        }
         setIsLoading(false);
     };
 
@@ -78,12 +78,12 @@ export default function ModuleContentPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white pb-32">
+        <div className="min-h-screen bg-gray-50 pb-32">
             {/* Top Reader Bar */}
-            <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100">
-                <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <Link href={`/courses/${courseId}`} className="text-xs font-bold text-gray-400 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-2">
-                        ← Exit Reader
+            <div className="sticky top-16 z-30 bg-white border-b border-gray-200">
+                <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <Link href={`/courses/${courseId}`} className="text-xs font-bold text-gray-500 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-2">
+                        ← Exit Module
                     </Link>
                     <div className="text-center flex-1 mx-4">
                         <h2 className="text-sm font-bold text-gray-900 truncate max-w-[300px]">{module.title}</h2>
@@ -92,54 +92,71 @@ export default function ModuleContentPage() {
                 </div>
             </div>
 
-            <article className="max-w-3xl mx-auto px-6 mt-16">
-                <header className="mb-16">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">
+            <div className="max-w-4xl mx-auto px-6 mt-12">
+                <header className="mb-12">
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
                         {module.title}
                     </h1>
                     {module.description && (
-                        <p className="text-xl text-gray-500 italic leading-relaxed font-serif">
+                        <p className="text-lg text-gray-600 leading-relaxed max-w-2xl">
                             {module.description}
                         </p>
                     )}
                 </header>
 
-                <div className="space-y-12">
-                    {articles.length === 0 ? (
-                        <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                            <p className="text-gray-400 font-medium">This module is currently awaiting content updates.</p>
-                        </div>
-                    ) : (
-                        articles
-                            .sort((a, b) => a.order - b.order)
-                            .map((article) => (
-                                <div key={article.id} className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-serif">
-                                    {article.content.split('\n').map((para, i) => (
-                                        <p key={i} className="mb-6">{para}</p>
-                                    ))}
-                                </div>
-                            ))
-                    )}
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Lessons</h2>
+                        <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase">{lessons.length} Total</span>
+                    </div>
+
+                    <div className="divide-y divide-gray-50">
+                        {lessons.length === 0 ? (
+                            <div className="py-20 text-center">
+                                <p className="text-gray-400 font-medium">No lessons available in this module yet.</p>
+                            </div>
+                        ) : (
+                            lessons
+                                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                                .map((lesson, i) => (
+                                    <Link
+                                        key={lesson.id}
+                                        href={`/courses/${courseId}/modules/${moduleId}/lessons/${lesson.id}`}
+                                        className="flex items-center gap-5 p-6 hover:bg-gray-50 transition-all group"
+                                    >
+                                        <div className="w-10 h-10 rounded-2xl bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                            {i + 1}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors">{lesson.title}</h3>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${lesson.content_type === 'video' ? 'bg-blue-50 text-blue-600' :
+                                                    lesson.content_type === 'article' ? 'bg-green-50 text-green-600' :
+                                                        'bg-purple-50 text-purple-600'
+                                                    }`}>
+                                                    {lesson.content_type}
+                                                </span>
+                                            </div>
+                                            {lesson.description && <p className="text-sm text-gray-500 line-clamp-1">{lesson.description}</p>}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-gray-300 group-hover:text-primary transition-colors uppercase tracking-widest hidden sm:block">Start</span>
+                                            <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center text-gray-300 group-hover:border-primary group-hover:text-primary transition-all">
+                                                →
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))
+                        )}
+                    </div>
                 </div>
 
-                {assessment && (
-                    <div className="mt-24 p-10 bg-gray-50 rounded-[2.5rem] border border-gray-100 text-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Ready for the challenge?</h3>
-                        <p className="text-gray-500 mb-8 max-w-sm mx-auto">Complete the module assessment to test your understanding and earn progress points.</p>
-                        <Button variant="primary" className="px-10 py-4 shadow-xl">
-                            Start Assessment: {assessment.title} &rarr;
-                        </Button>
-                    </div>
-                )}
-
-                <div className="mt-24 pt-12 border-t border-gray-100 flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-4 text-center block">END OF MODULE</span>
+                <div className="mt-12 flex justify-center">
                     <Link href={`/courses/${courseId}`}>
-                        <Button variant="outline">Continue to next module</Button>
+                        <Button variant="outline" className="rounded-full px-8">← Back to Course Overview</Button>
                     </Link>
                 </div>
-            </article>
+            </div>
         </div>
     );
 }

@@ -58,7 +58,6 @@ export default function LoginPage() {
         //     method: 'POST',
         //     body: JSON.stringify({ token })
         // });
-        console.log('Google credential response:', credentialResponse);
         setError('Backend Google Auth endpoint not yet configured.');
         toast.error('Backend Google Auth endpoint not yet configured.');
         setIsLoading(false);

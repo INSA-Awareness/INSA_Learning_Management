@@ -115,6 +115,46 @@ export interface Video {
     order: number;
 }
 
+export interface Question {
+    id: string;
+    type: 'multiple_choice' | 'true_false' | 'matching' | 'multiple';
+    question: string;
+    options?: { id: string; label: string; text?: string }[];
+    correct_answer: any;
+}
+
+export interface AssessmentPayload {
+    questions: Question[];
+}
+
+export interface Lesson {
+    id: string;
+    module: string;
+    title: string;
+    content_type: 'article' | 'video' | 'assessment' | 'image';
+    content?: string; // For articles
+    media_url?: string; // Standard for both video and image in some components
+    video_url?: string;
+    image_url?: string;
+    assessment_type?: 'multiple_choice' | 'true_false' | 'matching' | 'multiple';
+    assessment_payload?: AssessmentPayload | string;
+    order: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface CertificateExam {
+    id: string;
+    course: string;
+    title: string;
+    passing_score: number;
+    assessment_type: 'multiple' | 'true_false' | 'matching';
+    assessment_payload: AssessmentPayload | string;
+    order: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Course {
     id: string;
     title: string;
@@ -123,8 +163,21 @@ export interface Course {
     language: string;
     difficulty: string;
     status: 'draft' | 'published' | 'archived';
+    thumbnail_url?: string;
+    modules?: any[];
     created_at: string;
     updated_at: string;
+}
+
+export interface Module {
+    id: string;
+    course: string;
+    course_name?: string;
+    title: string;
+    description: string;
+    order: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface Alert {
@@ -154,7 +207,7 @@ export interface Campaign {
     start_date: string;
     send_time: string;
     channels: string;
-    status: 'draft' | 'active' | 'completed';
+    status: 'draft' | 'scheduled' | 'live' | 'completed' | 'cancelled';
     impressions?: number;
     clicks?: number;
     image_url?: string;
@@ -221,7 +274,6 @@ export async function apiFetch<T = any>(
         // Defensive: If method is GET but there is a body, it's likely an error (unless it's a very specific case)
         // This helps catch cases where apiFetch('/url', { body: ... }) is called without method: 'POST'
         if (method === 'GET' && options.body) {
-            console.warn(`apiFetch called with GET method but has a body for endpoint: ${endpoint}. Defaulting to POST.`);
         }
 
         if (tokens?.access) {
@@ -457,6 +509,24 @@ export const updateCourse = (id: string, data: Partial<Course>, patch = true) =>
 export const deleteCourse = (id: string) =>
     apiFetch(`/api/v1/courses/${id}/`, { method: 'DELETE' });
 
+// Modules
+export const getModules = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<Module>>(`/api/v1/modules/${query}`);
+};
+
+export const createModule = (data: Partial<Module>) =>
+    apiFetch<Module>('/api/v1/modules/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getModule = (id: string) =>
+    apiFetch<Module>(`/api/v1/modules/${id}/`);
+
+export const updateModule = (id: string, data: Partial<Module>, patch = true) =>
+    apiFetch<Module>(`/api/v1/modules/${id}/`, { method: patch ? 'PATCH' : 'PUT', body: JSON.stringify(data) });
+
+export const deleteModule = (id: string) =>
+    apiFetch(`/api/v1/modules/${id}/`, { method: 'DELETE' });
+
 // Alerts
 export const getAlerts = (params?: Record<string, any>) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : '';
@@ -514,5 +584,72 @@ export const enrollInCourse = (courseId: string, userId: string) =>
             status: 'in_progress'
         })
     });
+
+// Lesson Attempts
+export const submitLessonAttempt = (lessonId: string, answers: Record<string, any>) =>
+    apiFetch(`/api/v1/lessons/${lessonId}/submit/`, {
+        method: 'POST',
+        body: JSON.stringify({ answers })
+    });
+
+export const getLessonAttempts = (lessonId: string) =>
+    apiFetch(`/api/v1/lessons/${lessonId}/attempts/`);
+
+export const getLessonAttemptDetail = (lessonId: string, attemptId: string) =>
+    apiFetch(`/api/v1/lessons/${lessonId}/attempts/${attemptId}/`);
+
+// Lessons
+export const getLessons = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<Lesson>>(`/api/v1/lessons/${query}`);
+};
+
+export const createLesson = (data: Partial<Lesson>) =>
+    apiFetch<Lesson>('/api/v1/lessons/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getLesson = (id: string) =>
+    apiFetch<Lesson>(`/api/v1/lessons/${id}/`);
+
+export const updateLesson = (id: string, data: Partial<Lesson>, patch = true) =>
+    apiFetch<Lesson>(`/api/v1/lessons/${id}/`, { method: patch ? 'PATCH' : 'PUT', body: JSON.stringify(data) });
+
+export const deleteLesson = (id: string) =>
+    apiFetch(`/api/v1/lessons/${id}/`, { method: 'DELETE' });
+
+// Certificate Exams
+export const getCertificateExams = (params?: Record<string, any>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiFetch<PaginatedResponse<CertificateExam>>(`/api/v1/certificate-exams/${query}`);
+};
+
+export const createCertificateExam = (data: Partial<CertificateExam>) =>
+    apiFetch<CertificateExam>('/api/v1/certificate-exams/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getCertificateExam = (id: string) =>
+    apiFetch<CertificateExam>(`/api/v1/certificate-exams/${id}/`);
+
+export const updateCertificateExam = (id: string, data: Partial<CertificateExam>, patch = true) =>
+    apiFetch<CertificateExam>(`/api/v1/certificate-exams/${id}/`, { method: patch ? 'PATCH' : 'PUT', body: JSON.stringify(data) });
+
+export const deleteCertificateExam = (id: string) =>
+    apiFetch(`/api/v1/certificate-exams/${id}/`, { method: 'DELETE' });
+
+// Certificate Exam Attempts
+export const submitCertificateExam = (examId: string, answers: Record<string, any>) =>
+    apiFetch(`/api/v1/certificate-exams/${examId}/submit/`, {
+        method: 'POST',
+        body: JSON.stringify({ answers })
+    });
+
+export const getCertificateExamAttempts = (examId: string) =>
+    apiFetch(`/api/v1/certificate-exams/${examId}/attempts/`);
+
+export const getCertificateExamAttemptDetail = (examId: string, attemptId: string) =>
+    apiFetch(`/api/v1/certificate-exams/${examId}/attempts/${attemptId}/`);
+
+// Certificate Downloads
+export const downloadCertificate = (enrollmentId: string) =>
+    apiFetch(`/api/v1/enrollments/${enrollmentId}/certificate/`);
+
 
 
