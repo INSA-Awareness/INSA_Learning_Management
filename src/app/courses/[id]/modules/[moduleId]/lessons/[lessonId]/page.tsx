@@ -54,16 +54,16 @@ export default function LessonDetailPage() {
                             : foundLesson.assessment_payload;
 
                         if (payload?.questions) {
-                            payload.questions.forEach((q: any, i: number) => {
-                                    id: q.id,
-                                    type: q.type,
-                                    question: q.question,
-                                    options: q.options,
-                                    correct_answer: q.correct_answer
-                                });
-                            });
-                        } else {
-                        }
+    payload.questions = payload.questions.map((q: any) => ({
+        id: q.id,
+        type: q.type,
+        question: q.question,
+        options: q.options,
+        correct_answer: q.correct_answer
+    }));
+} else {
+    // Handle the else case if needed
+}
 
                         setLesson(foundLesson);
                     } else {
